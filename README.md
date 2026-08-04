@@ -420,9 +420,10 @@ Then just **double-click `Warframe Toolbox.pyw`** — the `.pyw` extension runs
 under `pythonw.exe`, so the app opens as a standalone window with no terminal
 behind it. (If a startup error ever occurs before the window opens, it's
 written to `launch-error.log` in the data home and shown in a dialog, since
-there's no console to print to.) On a beta-tester machine, launch via
-`update.bat` instead — it pulls the latest version first and still launches
-when offline.
+there's no console to print to.) The app **keeps itself up to date**: at
+launch it quietly pulls the newest version from its git remote (toggle in
+Settings > Display); beta testers install via the generated installer (see
+`docs/DEVELOPMENT.md`), and `update.bat` remains as a manual fallback.
 
 An `.exe` build (PyInstaller onedir) is planned; see `docs/DEVELOPMENT.md`.
 

@@ -46,21 +46,37 @@ Overwolf companion's `manifest.json` versions independently.
 
 ## Releasing to the beta tester
 
-The beta channel is the git repo itself (private; the tester is a
-collaborator):
+The beta channel is the git repo itself (private, no collaborator needed):
+the tester runs an **installer** that embeds a read-only token, and the app
+**updates itself at launch** (`core/updater.py`; toggle in Settings >
+Display, default on).
 
-1. One-time setup on their machine: install Python 3.11 (python.org build
-   recommended - see the Store caveat) and Git; accept the GitHub invite;
-   `git clone https://github.com/mortefix/Warframe-Toolbox.git` (HTTPS + Git
-   Credential Manager); `pip install -r requirements.txt`.
-2. Always start via **`update.bat`**: it `git pull --ff-only`s (skipped
-   harmlessly when offline) and then launches the app.
-3. Their data lands in their own `%LOCALAPPDATA%\WarframeToolbox` - a pull
-   can never touch it, and their JWT never enters git because the data root
-   is outside the repo entirely.
+One-time, Daniel's side:
 
-Ship a release: merge to `main`, push. That's it - their next `update.bat`
-picks it up.
+1. Mint the token: GitHub → Settings → Developer settings → Personal access
+   tokens → **Fine-grained tokens** → Generate. Repository access: only
+   `Warframe-Toolbox`. Permissions: **Contents: Read-only**. Expiration:
+   **No expiration**. (Revoking this token on GitHub is the kill switch for
+   every installer built from it.)
+2. `python tools/installer/make_installer.py <token>` → produces
+   `Install Warframe Toolbox.bat`. Send that file over Discord.
+
+The tester double-clicks it. The installer (no admin rights needed)
+installs python.org Python 3.11 per-user if missing, uses the machine's git
+or drops a portable MinGit beside the app, clones to
+`%LOCALAPPDATA%\Programs\WarframeToolbox\app-repo`, installs deps, and
+creates Desktop/Start Menu shortcuts (plus an "Uninstall Warframe Toolbox"
+entry → the shipped `uninstall.bat`, which always keeps their data unless
+they explicitly say otherwise).
+
+Ship a release: merge to `main`, push. Their app pulls it on next launch;
+new deps are pip-installed automatically when `requirements.txt` changed.
+Their data lives in their own `%LOCALAPPDATA%\WarframeToolbox` - a pull can
+never touch it, and no JWT can enter git because the data root is outside
+the repo entirely.
+
+`update.bat` remains as the manual fallback path (pull-then-launch) - e.g.
+when the toggle is off or a launch-time pull failed.
 
 ## Packaging (.exe) - next chapter, notes so far
 
