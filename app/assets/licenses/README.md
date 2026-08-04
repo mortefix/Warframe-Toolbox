@@ -55,6 +55,7 @@ shared with Material Symbols).
 |---|---|---|---|
 | Be Vietnam Pro | `../fonts/BeVietnamPro-Regular.ttf` | OFL 1.1 | Copyright 2021 The Be Vietnam Pro Project Authors (github.com/bettergui/BeVietnamPro) |
 | Marcellus | `../fonts/Marcellus-Regular.ttf` | OFL 1.1 | Copyright (c) 2012, Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), Reserved Font Name "Marcellus" |
+| Cormorant Garamond | `../fonts/CormorantGaramond-VF.ttf` | OFL 1.1 | Copyright 2015 The Cormorant Project Authors (github.com/CatharsisFonts/Cormorant) |
 | Cinzel Decorative | `../fonts/CinzelDecorative-Bold.ttf` | OFL 1.1 | Copyright (c) 2012 Natanael Gama (info@ndiscovered.com), Reserved Font Name "Cinzel" |
 | Spectral | `../fonts/Spectral-Medium.ttf` | OFL 1.1 | Copyright 2017 The Spectral Project Authors (github.com/productiontype/Spectral) |
 | Orbitron | `../fonts/Orbitron-VF.ttf` | OFL 1.1 | Copyright 2018 The Orbitron Project Authors (github.com/theleagueof/orbitron), Reserved Font Name "Orbitron" |
