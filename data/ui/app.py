@@ -887,6 +887,10 @@ def main(argv: list[str] | None = None) -> int:
             "check the taskbar or the notification area for the open one.")
         return 0
     app._wftb_lock = lock             # hold it for the process lifetime
+    # Heal HKCU Run entries whose baked-in absolute paths went stale (folder
+    # moved, Python reinstalled). After the lock: only the surviving instance
+    # may touch the registry.
+    core_config.repair_run_entries()
     app.setStyleSheet(qss.build(set(QFontDatabase.families())))
     win = MainWindow()
     win.show_configured()

@@ -40,15 +40,14 @@ os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS",
                       "--disable-features=DirectComposition")
 
 # One front end: PySide6 (data/ui/). The Tkinter host was removed once every
-# screen was ported; a copy lives in _backup_tk_<date>/ if anything needs
-# looking up.
+# screen was ported; git history has it if anything needs looking up.
 #
 # Keep the FILENAME: config.LAUNCHER_PYW bakes it into the HKCU Run entries,
 # so renaming this file breaks autostart for anyone who enabled it.
 try:
     # autostart must register THIS file, which is the launcher
     from core import config as _config
-    _config.set_launcher(_config.LAUNCHER_TK)
+    _config.set_launcher(_config.LAUNCHER_PYW)
     from ui.app import main
     sys.exit(main())
 except SystemExit:

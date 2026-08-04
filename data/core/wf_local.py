@@ -15,10 +15,9 @@ same rule, enforced in code, not by convention:
   * Reads are capped (MAX_SCAN_BYTES) so a huge log can't stall the UI.
 
 The game updates EE.log during play, so consumers must expect staleness. By
-design nothing here re-reads automatically: read_account() captures the file's
-mtime at the moment it was read, callers cache it (cache_log_mtime()), and a
-future "Update" button can call is_stale() to compare the cached stamp with
-the file's current one before deciding to read again.
+design nothing here re-reads automatically: callers capture log_mtime() when
+they read and decide for themselves when to look again (core.ee_events does
+exactly that with its byte offset).
 """
 
 from __future__ import annotations
@@ -26,8 +25,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
 from core import atomic
@@ -43,13 +40,9 @@ EE_LOG = LOG_DIR / "EE.log"
 # hundred KB, right after login).
 MAX_SCAN_BYTES = 16 * 1024 * 1024
 
-# Host-side prefs (install dir override + the cached data timestamp). This
-# file lives in OUR folder - game files are never written, ever.
+# Host-side prefs (the install dir override). This file lives in OUR
+# folder - game files are never written, ever.
 PREFS_PATH = ROOT / ".wf_local.json"
-
-
-class WFLocalError(Exception):
-    """Local game data could not be read/parsed."""
 
 
 # ---- the read-only guarantee ------------------------------------------------
@@ -81,28 +74,11 @@ def read_from_readonly(path: Path, offset: int, limit: int = MAX_SCAN_BYTES) \
         return fh.read(limit)
 
 
-# ---- EE.log: account info ---------------------------------------------------
+# ---- EE.log ------------------------------------------------------------------
 
 # Verified against a live EE.log (2026-07-26):
-#   16.009 Sys [Info]: Logged in Dzwsin
-#   0.120  Sys [Diag]: Process Command-line: ... -clienttype:Steam
-#   0.120  Sys [Diag]: Build Label: 2026.07.11.15.28 Retail Windows x64 ...
 #   0.123  Sys [Diag]: Current directory: D:\...\Warframe\Tools
-_RX_LOGIN = re.compile(r"Logged in (\S+)")
-_RX_CLIENT = re.compile(r"-clienttype:(\w+)")
-_RX_BUILD = re.compile(r"Build Label:\s*(.+?)\s*$", re.MULTILINE)
 _RX_CURDIR = re.compile(r"Current directory:\s*(.+?)\s*$", re.MULTILINE)
-
-
-@dataclass
-class AccountInfo:
-    """A snapshot of the local game data at one moment in time."""
-    username: str
-    client: str | None          # Steam / Epic / (None = standalone)
-    build: str | None           # game build label
-    log_path: str               # the file this came from
-    log_mtime: float            # the file's mtime WHEN IT WAS READ (cache me)
-    read_at: float              # wall clock of the read itself
 
 
 def log_mtime(path: Path = EE_LOG) -> float | None:
@@ -112,30 +88,6 @@ def log_mtime(path: Path = EE_LOG) -> float | None:
         return path.stat().st_mtime
     except OSError:
         return None
-
-
-def read_account(path: Path = EE_LOG) -> AccountInfo:
-    """Read-only parse of EE.log for the logged-in account. Raises
-    WFLocalError if the file is missing or holds no login line (e.g. the
-    game was started but never signed in)."""
-    if not path.exists():
-        raise WFLocalError(f"game data not found: {path}")
-    mtime = log_mtime(path)
-    text = read_file_readonly(path).decode("utf-8", errors="replace")
-    m = _RX_LOGIN.search(text)
-    if not m:
-        raise WFLocalError("no login found in game data "
-                           "(start Warframe and sign in once)")
-    client = _RX_CLIENT.search(text)
-    build = _RX_BUILD.search(text)
-    return AccountInfo(
-        username=m.group(1),
-        client=client.group(1) if client else None,
-        build=build.group(1) if build else None,
-        log_path=str(path),
-        log_mtime=mtime or 0.0,
-        read_at=time.time(),
-    )
 
 
 # ---- install location ---------------------------------------------------------
@@ -184,10 +136,10 @@ def detect_install() -> Path | None:
     return None
 
 
-# ---- prefs + the staleness provision -----------------------------------------
+# ---- prefs -------------------------------------------------------------------
 
 def load_prefs() -> dict:
-    """{install_dir: str|None, cached_log_mtime: float|None}"""
+    """{install_dir: str|None}"""
     try:
         data = json.loads(PREFS_PATH.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -195,26 +147,8 @@ def load_prefs() -> dict:
     if not isinstance(data, dict):
         data = {}                   # []/null would crash the setdefault below
     data.setdefault("install_dir", None)
-    data.setdefault("cached_log_mtime", None)
     return data
 
 
 def save_prefs(prefs: dict) -> None:
     atomic.write_json(PREFS_PATH, prefs)
-
-
-def cache_log_mtime(prefs: dict, mtime: float) -> None:
-    """Remember the data timestamp that the last successful read saw.
-    The future Update button compares this against log_mtime()."""
-    prefs["cached_log_mtime"] = mtime
-    save_prefs(prefs)
-
-
-def is_stale(prefs: dict, path: Path = EE_LOG) -> bool | None:
-    """Has the game written new data since we last read it?
-    True/False, or None when it can't be known (never read, or file gone)."""
-    cached = prefs.get("cached_log_mtime")
-    current = log_mtime(path)
-    if cached is None or current is None:
-        return None
-    return current > cached

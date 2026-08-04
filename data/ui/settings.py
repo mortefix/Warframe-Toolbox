@@ -1103,7 +1103,6 @@ _LICENSING = (
     "Bundled UI fonts\n"
     "  Be Vietnam Pro — OFL 1.1 · © 2021 The Be Vietnam Pro Project Authors\n"
     "  Marcellus — OFL 1.1 · © 2012 Astigmatic (AOETI)\n"
-    "  Cormorant Garamond — OFL 1.1 · © 2015 The Cormorant Project Authors\n"
     "  Cinzel Decorative — OFL 1.1 · © 2012 Natanael Gama\n"
     "  Spectral — OFL 1.1 · © 2017 The Spectral Project Authors\n"
     "  Orbitron — OFL 1.1 · © 2018 The Orbitron Project Authors\n"

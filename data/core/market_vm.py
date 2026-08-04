@@ -86,7 +86,7 @@ def filter_orders(rows: Iterable[dict], allowed: tuple[str, ...] | None
 
 
 def book_summary(sell_n: int, buy_n: int, scope_word: str, cap: int) -> str:
-    """The combined line, still used by the Tk front end."""
+    """The combined "N sellers · M buyers" line for the order book."""
     return (f"{sell_n} sellers · {buy_n} buyers ({scope_word}) — "
             f"showing best {cap} per side")
 

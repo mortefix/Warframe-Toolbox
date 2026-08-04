@@ -15,14 +15,14 @@ Arcanes live in the inventory under `/Lotus/Upgrades/CosmeticEnhancers/...`:
                                        "{\"lvl\":N}"}
 This module returns, per arcane path, the best rank owned and the total
 copy count - enough to tell "maxed", "owned but not maxed", or "missing".
-When AlecaFrame data isn't present it returns None and the app falls back
-to manual check-off, so the feature still works on a friend's machine.
+When AlecaFrame data isn't present the readers degrade to None and the app
+falls back to manual check-off, so the feature still works on a friend's
+machine.
 
-The parsed result is cached to `.arcane_inv.json` (read_arcanes_cached):
-a fresh cache is served straight from disk with no decrypt, staleness is
-a single stat() of lastData.dat's mtime, and the last good inventory
-survives even if AlecaFrame's cache disappears. Consumers re-check on
-open (cache_is_stale) and keep a manual force-refresh.
+Caching and provider selection live in core.wf_inventory (its
+read_arcanes_cached / cache_is_stale): this module is the AlecaFrame
+*reader* plus the pure helpers (arcanes_from_inv, counts_from_inv,
+build_overview) that work on an inventory dict from ANY provider.
 """
 
 from __future__ import annotations
@@ -74,8 +74,9 @@ def _decrypt_lastdata(raw: bytes) -> dict:
     byte was wrong. `_IV` is in fact correct, and when AlecaFrame's format
     changed the assumed prefix stopped matching - so the "correction" computed
     a bad IV, corrupted the first block, and every read failed the JSON parse.
-    Because both this layer and read_arcanes() degrade to "no data" rather than
-    raising, the app quietly served a stale cache instead of reporting it.
+    Because both this layer and the inventory readers degrade to "no data"
+    rather than raising, the app quietly served a stale cache instead of
+    reporting it.
 
     So: use `_IV` as given. Only if that fails to parse do we fall back to
     prefix recovery, trying each prefix AlecaFrame has been seen to emit -
@@ -111,8 +112,8 @@ MASTERY_CACHE = ROOT / ".mastery.json"
 def read_mastery() -> int | None:
     """The player's mastery rank (inventory PlayerLevel), or None when the
     AlecaFrame cache is absent or does not decrypt. Same read-only,
-    degrade-to-None contract as read_arcanes(); the ~0.9s decrypt means callers
-    should run this OFF the GUI thread."""
+    degrade-to-None contract as the rest of this module; the ~0.9s decrypt
+    means callers should run this OFF the GUI thread."""
     if not LASTDATA.is_file():
         return None
     try:
@@ -273,9 +274,10 @@ def _accumulate(inv: dict, bump) -> None:
 # active (Overwolf companion, AlecaFrame, ...); they own no source/cache.
 
 def arcanes_from_inv(inv: dict) -> dict[str, dict]:
-    """path -> {"best_rank": int, "copies": int}, from an inventory dict. Same
-    contract as read_arcanes(), minus the AlecaFrame decrypt. Tolerates odd
-    records (a malformed row is skipped, not fatal)."""
+    """path -> {"best_rank": int, "copies": int}, from an inventory dict
+    supplied by whichever provider is active - no source, no cache, no
+    decrypt here. Tolerates odd records (a malformed row is skipped, not
+    fatal)."""
     owned: dict[str, dict] = {}
 
     def bump(path: str, rank: int, copies: int) -> None:

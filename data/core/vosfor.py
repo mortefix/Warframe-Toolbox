@@ -58,10 +58,6 @@ def load_overrides() -> dict:
         return {}
 
 
-def save_overrides(ov: dict) -> None:
-    atomic.write_json(OVERRIDE_FILE, ov, indent=1)
-
-
 def _status(arc: dict, owned: dict | None, override: dict) -> str:
     """MAXED / OWNED / MISSING for one arcane. A manual override (True =
     maxed, False = missing) beats the auto-read."""
@@ -212,13 +208,6 @@ def refresh_inventory(force: bool = False) \
     force=True re-reads regardless (the manual Update button). The source is
     whichever inventory provider is active (see core.wf_inventory)."""
     return wf_inventory.read_arcanes_cached(force=force)
-
-
-def inventory_stale(cached_mtime: float | None) -> bool:
-    """Cheap (stat-only) check: has the inventory source written new data since
-    `cached_mtime`? Run on every Vosfor open; the expensive read only happens
-    when this says yes."""
-    return wf_inventory.cache_is_stale(cached_mtime)
 
 
 VOSFOR_PER_PACK = 200

@@ -102,7 +102,7 @@ USER_FILES: list[tuple[str, str]] = [
     (".wfm_session.json", "warframe.market session token (the account link)"),
     (".wfm_listings.json", "My Listings prefs: floor/cap offsets + overrides"),
     (".wfm_watchlist.json", "Market watchlist (bookmarked items)"),
-    (".wf_local.json", "Warframe install path + cached game-data timestamp"),
+    (".wf_local.json", "Warframe install path override"),
     (".vosfor_owned.json", "Vosfor planner: manual arcane check-offs"),
     (".vosfor_prices.json", "Vosfor planner: cached warframe.market prices"),
     (".arcane_inv.json", "(legacy) cached arcane inventory — superseded by the "
@@ -244,8 +244,7 @@ RUN_NAME = "WarframeToolbox"
 RUN_WATCHER_NAME = "WarframeToolboxWatcher"
 #: The launcher, in the project root. Its FILENAME is baked into the HKCU Run
 #: entries, so renaming it breaks autostart for anyone who enabled it.
-LAUNCHER_TK = ROOT.parent / "Warframe Toolbox.pyw"     # historical name
-LAUNCHER_PYW = LAUNCHER_TK
+LAUNCHER_PYW = ROOT.parent / "Warframe Toolbox.pyw"
 
 
 def set_launcher(path) -> None:
@@ -340,7 +339,7 @@ def repair_run_entries() -> None:
     while the Settings checkbox still reads as enabled. Only BROKEN entries
     are re-written: a working entry may belong to another copy of the app,
     and merely launching this copy shouldn't hijack it. Called at every app
-    start; a no-op when nothing is registered."""
+    start (ui.app.main); a no-op when nothing is registered."""
     if _run_entry_broken(RUN_NAME):
         set_start_with_windows(True)
     if _run_entry_broken(RUN_WATCHER_NAME):
@@ -355,18 +354,4 @@ def spawn_watcher() -> bool:
                          cwd=str(ROOT), close_fds=True)
         return True
     except OSError:
-        return False
-
-
-def warframe_running() -> bool:
-    """Is the game itself running? Detected by the game's own executable
-    name via tasklist - nothing machine-specific. (No console flash.)"""
-    try:
-        flags = 0x08000000 if os.name == "nt" else 0    # CREATE_NO_WINDOW
-        out = subprocess.run(
-            ["tasklist", "/FI", "IMAGENAME eq Warframe.x64.exe", "/NH"],
-            capture_output=True, text=True, timeout=10,
-            creationflags=flags).stdout
-        return "Warframe.x64.exe" in out
-    except (OSError, subprocess.SubprocessError):
         return False
