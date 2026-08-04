@@ -239,6 +239,10 @@ class HomeView(QWidget):
         fl.setSpacing(t.SP_XL)
         fl.addWidget(label("Warframe Toolbox", role="h1"))
         fl.addWidget(self._status_box(status))
+        # launch self-update outcome - one quiet line, hidden until set
+        self._update_note = label("", role="muted")
+        self._update_note.setVisible(False)
+        fl.addWidget(self._update_note)
         fl.addWidget(label("Available Tools", role="h1"))
         self._tools_container = self._tools_box()
         fl.addWidget(self._tools_container)
@@ -246,6 +250,11 @@ class HomeView(QWidget):
         scroll.setWidget(frame)
 
         self._load_rank(status.inventory)
+
+    def set_update_note(self, text: str) -> None:
+        """One quiet line under the status panel - '' hides it."""
+        self._update_note.setText(text)
+        self._update_note.setVisible(bool(text))
 
     # -- status panel -------------------------------------------------------
 

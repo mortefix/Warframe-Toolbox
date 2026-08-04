@@ -864,6 +864,31 @@ class MainWindow(QWidget):
         read) on its next rebuild, so there is no widget to poke here."""
         self._last_collect = result
 
+    def _check_updates(self) -> None:
+        """Launch-time self-update (core.updater), off-thread. Silent unless
+        it actually updated; every rail (toggle, branch, dirty tree) lives in
+        the core module."""
+        from core import updater as core_updater
+        from ui import work
+
+        def job(settings=dict(self.settings)):
+            return core_updater.check_and_update(settings)
+
+        self._update_job = work.run(job, self._update_check_done)
+
+    def _update_check_done(self, result) -> None:
+        """Update finished. The new code applies next launch; all this does
+        is show one quiet line on Home."""
+        if not getattr(result, "updated", False) or not result.new_version:
+            return
+        index = self._pages.get("home")
+        if index is None:
+            return
+        view = self.stack.widget(index)
+        if view is not None and hasattr(view, "set_update_note"):
+            view.set_update_note(f"Updated to {result.new_version} — "
+                                 f"takes effect next launch.")
+
 
 def main(argv: list[str] | None = None) -> int:
     app = QApplication(argv if argv is not None else sys.argv[:1])
@@ -903,6 +928,9 @@ def main(argv: list[str] | None = None) -> int:
     # DB) in the background, after the window is up. Deferred and off-thread so
     # launch stays instant; each refresher self-throttles and swallows errors.
     QTimer.singleShot(1500, win._refresh_collected_data)
+    # Self-update last: it may shell out to git/pip, so it waits for the
+    # window and the data warmups to be on their way first.
+    QTimer.singleShot(3000, win._check_updates)
     return app.exec()
 
 

@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
 from core import bookmarks as core_bookmarks
 from core import config as core_config
 from core import theme as t
+from core import updater as core_updater
 from core import version as core_version
 from core import wf_local
 from core import wf_profile
@@ -357,6 +358,9 @@ class DisplayPage(Page):
         self.check(sysbox, "Send to tray when minimized", "minimize_to_tray")
         self.check(sysbox, "Minimize to system tray on window close",
                    "close_to_tray")
+        self.check(sysbox, "Check for updates at launch", "check_updates")
+        self.note(sysbox, "At startup the Toolbox quietly pulls its newest "
+                          "version; changes apply on the next launch.")
         self.check(sysbox, "Enable Developer Panels", "dev_panels",
                    self._toggle_dev_panels)
         self.note(sysbox, "Shows the DevTools section (read-only inspectors "
@@ -1148,6 +1152,13 @@ class AboutPage(QWidget):
         row.setSpacing(t.SP_SM)
         row.addWidget(label("Developer:", role="muted"))
         row.addWidget(label(_DEV_NAME, role=""))
+        row.addSpacing(t.SP_XL)
+        row.addWidget(label("Version:", role="muted"))
+        # a freshly self-updated copy shows what is waiting for the restart
+        pending = core_updater.pending_version()
+        row.addWidget(label(_APP_VERSION + (f"  ({pending} installed — "
+                                            f"restart to apply)"
+                                            if pending else ""), role=""))
         row.addSpacing(t.SP_XL)      # reasonable gap before the Discord pair
         row.addWidget(label("Discord:", role="muted"))
         # a real clickable invite (opens the system browser, not the web tab),

@@ -38,6 +38,7 @@ DEFAULTS = {
     "close_to_tray": True,         # closing the window hides to the tray instead
                                    # of quitting - a background helper stays ready
                                    # beside the game (Quit from the tray to exit)
+    "check_updates": True,         # launch-time git self-update (core.updater)
     "adblock": True,               # block ads/trackers in the web apps
     "theme": "Orokin Dark",        # colour palette: "Orokin Dark" / "Orokin Light"
     # Digital Extremes account identity for the public profile API
