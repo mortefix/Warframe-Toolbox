@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
 from core import bookmarks as core_bookmarks
 from core import config as core_config
 from core import theme as t
+from core import version as core_version
 from core import wf_local
 from core import wf_profile
 from registry import TOOLS
@@ -1076,8 +1077,8 @@ class ToolboxPage(Page):
         self.say("all user data deleted")
 
 
-#: The one place the app version string lives.
-_APP_VERSION = "1.0"
+#: The version string lives in core.version; this is just the local alias.
+_APP_VERSION = core_version.__version__
 
 #: Developer identity. Name and the Discord invite share ONE line, spaced apart.
 _DEV_NAME = "Dzwsin"

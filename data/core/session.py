@@ -35,11 +35,13 @@ from pathlib import Path
 
 import requests
 
+# Re-exported so the HTTP modules keep importing it from here; the actual
+# string is derived in core.version (one bump updates every surface).
+from core.version import USER_AGENT  # noqa: F401
+
 ROOT = Path(__file__).resolve().parent.parent
 SESSION_PATH = ROOT / ".wfm_session.json"
 
-# Keep this honest - WFM's rules require identifying your client.
-USER_AGENT = "WarframeToolbox/1.0 (by Mortefix)"
 API = "https://api.warframe.market"
 
 class AuthError(Exception):
