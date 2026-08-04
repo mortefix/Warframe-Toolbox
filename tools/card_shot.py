@@ -6,7 +6,7 @@ Usage: QT_SCALE_FACTOR=1.0 python tools/card_shot.py out.png
 import os, sys
 os.environ.pop("QT_QPA_PLATFORM", None)
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "data"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "app"))
 
 out = sys.argv[1] if len(sys.argv) > 1 else "card.png"
 from PySide6.QtGui import QFontDatabase

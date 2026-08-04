@@ -4,7 +4,7 @@ no network, no store writes."""
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 from core import collect, ee_events, public_export, store, wf_profile, worldstate
 
 fails = []

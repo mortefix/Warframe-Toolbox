@@ -4,7 +4,7 @@ web) the shell draws as gold-bordered boxes."""
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 from core import nav
 from registry import TOOLS
 

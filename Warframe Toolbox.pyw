@@ -15,14 +15,13 @@ import os
 import sys
 import traceback
 
-# The app itself lives in data/ - the root holds only this launcher and the
-# README. Everything the app generates (session, prefs, caches, logs) stays
-# inside data/ too.
+# The app itself lives in app/ - the root holds only this launcher, the
+# docs, and the tooling folders.
 HERE = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(HERE, "data")
-os.chdir(DATA)
-if DATA not in sys.path:
-    sys.path.insert(0, DATA)
+APP = os.path.join(HERE, "app")
+os.chdir(APP)
+if APP not in sys.path:
+    sys.path.insert(0, APP)
 
 # QtWebEngine renders the web tabs in a separate Chromium process whose GPU
 # compositor, on this display, presented NON-ATOMIC frames while a page
@@ -39,7 +38,7 @@ if DATA not in sys.path:
 os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS",
                       "--disable-features=DirectComposition")
 
-# One front end: PySide6 (data/ui/). The Tkinter host was removed once every
+# One front end: PySide6 (app/ui/). The Tkinter host was removed once every
 # screen was ported; git history has it if anything needs looking up.
 #
 # Keep the FILENAME: config.LAUNCHER_PYW bakes it into the HKCU Run entries,
@@ -55,7 +54,7 @@ except SystemExit:
 except BaseException:                                       # noqa: BLE001
     tb = traceback.format_exc()
     try:
-        with open(os.path.join(DATA, "launch-error.log"), "w",
+        with open(os.path.join(APP, "launch-error.log"), "w",
                   encoding="utf-8") as fh:
             fh.write(tb)
     except OSError:

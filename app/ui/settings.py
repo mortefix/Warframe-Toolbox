@@ -1093,7 +1093,7 @@ _CHANGELOG = (f"v{_APP_VERSION}\n"
               "This app is under development.")
 
 #: A readable digest of every bundled licence. The CANONICAL, per-file registry
-#: is data/assets/licenses/README.md (with the full OFL/Apache text beside it) -
+#: is app/assets/licenses/README.md (with the full OFL/Apache text beside it) -
 #: keep this in step with that file when a bundled asset changes.
 _LICENSING = (
     "Warframe Toolbox — © the Warframe Toolbox authors. An independent, "
@@ -1115,7 +1115,7 @@ _LICENSING = (
     "App icon, crest, and platinum gem\n"
     "  Warframe © Digital Extremes. Fan-project use; not redistributed as a "
     "Digital Extremes work.\n\n"
-    "Full licence text ships in data/assets/licenses/ (OFL.txt, Apache-2.0.txt) "
+    "Full licence text ships in app/assets/licenses/ (OFL.txt, Apache-2.0.txt) "
     "with a per-file registry in README.md.")
 
 

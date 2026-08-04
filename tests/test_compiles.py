@@ -2,7 +2,7 @@
 
 The behavioural suites import the modules they exercise, so a syntax error in
 anything they touch surfaces at once. But the standalone tools under
-`data/tools/` are launched as separate processes and imported by nothing here,
+`app/tools/` are launched as separate processes and imported by nothing here,
 so a broken one is invisible until a user opens it - which is exactly how a
 mangled string literal (`""Warframe Toolbox.pyw"`) sat in api_check.py while
 all 16 other files stayed green. Compiling the whole tree closes that hole:
@@ -18,7 +18,7 @@ from py_compile import PyCompileError, compile as _compile
 ROOT = Path(__file__).resolve().parent.parent
 # The whole shipped surface: the app package and the launcher beside it.
 TARGETS = sorted(
-    list((ROOT / "data").rglob("*.py"))
+    list((ROOT / "app").rglob("*.py"))
     + list(ROOT.glob("*.pyw"))
     + list(ROOT.glob("*.py"))
 )

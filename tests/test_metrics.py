@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 from core import theme as t
 
 fails = []

@@ -38,9 +38,9 @@ If something cannot be measured, that is itself worth saying out loud.
 ## Commands
 
 ```bash
-pip install -r data/requirements.txt   # requests, websocket-client, PySide6-{Essentials,Addons}
-python "Warframe Toolbox.pyw"          # launch (errors -> data/launch-error.log)
-python -m py_compile data/ui/*.py data/core/*.py   # syntax sanity check
+pip install -r requirements.txt   # requests, websocket-client, PySide6-{Essentials,Addons}
+python "Warframe Toolbox.pyw"          # launch (errors -> app/launch-error.log)
+python -m py_compile app/ui/*.py app/core/*.py   # syntax sanity check
 python tests/run_all.py                            # 16 test files, no pytest needed
 ```
 
@@ -51,18 +51,18 @@ unaffected. **Tkinter is no longer used anywhere.**
 ## Architecture
 
 ```
-Warframe Toolbox.pyw        launcher: chdir to data/, run host, log crashes
-data/registry.py            tool catalogue: one Tool() entry = sidebar item + Home card
-data/warframe_watcher.pyw   standalone watcher process (launch Toolbox with the game)
-data/core/                  ALL backend AND all UI-agnostic rules:
+Warframe Toolbox.pyw        launcher: chdir to app/, run host, log crashes
+app/registry.py            tool catalogue: one Tool() entry = sidebar item + Home card
+app/warframe_watcher.pyw   standalone watcher process (launch Toolbox with the game)
+app/core/                  ALL backend AND all UI-agnostic rules:
                             session, market, gateway, presence, webhost, config,
                             wf_local, arcane_inv, arcane_market, aes, vosfor,
                             wiki, tray, assets, theme, webapps, floors,
                             repricer, vosfor_vm, listings_vm
-data/ui/                    THE FRONT END: app (shell), home, listings, market,
+app/ui/                    THE FRONT END: app (shell), home, listings, market,
                             vosfor, settings, web, runner, dialogs, overlay,
                             suggest, icons, qss, widgets, work, bridge
-data/tools/<name>/          tool scripts, run as subprocesses through the gateway
+app/tools/<name>/          tool scripts, run as subprocesses through the gateway
 tests/                      plain-script test suite; `python tests/run_all.py`
 ```
 
@@ -103,7 +103,7 @@ Qt-specific traps, every one of which has cost real time here:
 1. Persistent chrome — custom title bar + header + sidebar built once in
    `App.__init__`, never rebuilt; only `App.content` children change.
 2. Core owns backend AND rules — networking/auth/caching/file-I/O live in
-   `data/core/*`, and so does every decision, derivation and piece of copy
+   `app/core/*`, and so does every decision, derivation and piece of copy
    that does not need a widget. A view class **places widgets and nothing
    else**. If you can write it without touching Tk, it does not belong in
    `wf_market_helper.py`. Concretely, already extracted:
@@ -167,13 +167,13 @@ calls them via getattr duck-typing on `_active_view` only.
 change.** It owns the design language, the colour/typography tokens, and the
 **dimensional system** (spacing scale, sizing conventions, proportion &
 golden-ratio policy, corners/borders, component patterns) plus the enforcement
-invariants. Values live in `data/core/theme.py`; the rules live in the guide.
+invariants. Values live in `app/core/theme.py`; the rules live in the guide.
 
 Load-bearing non-negotiables (the guide has the rest):
 - Gold `ACCENT` is inlay, never plating: hairlines, focus edge, active-nav
   finial, active-tab underline, and money-action buttons ONLY. `WARN` is orange
   so it can never read as gold.
-- No raw `#hex` in `data/ui/` — every colour is a `theme` token; `qss.py`
+- No raw `#hex` in `app/ui/` — every colour is a `theme` token; `qss.py`
   generates the sheet and a test asserts it. Severity crosses core→ui as a role
   word (`ok`/`warn`/`err`), never a colour.
 - Fonts by role only (`theme.FONTS`: h1/h2/body/small/price/mono/icon/msgbtn) —
@@ -299,7 +299,7 @@ traps exist in any toolkit; `_backup_tk_<date>/` has the code they describe.
 
 ## Adding things
 
-- **New tool**: script under `data/tools/<name>/` + one `Tool()` entry in
+- **New tool**: script under `app/tools/<name>/` + one `Tool()` entry in
   `registry.py` → sidebar item + Home card appear. `requires_session=True`
   gates launch. Tools call the gateway with WFM paths; they exit without it.
 - **New native app**: view class + entry in `App._nav_items` + Home card in

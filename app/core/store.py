@@ -7,7 +7,7 @@ lets the app stay useful when a source is unavailable - a closed game, a down
 endpoint, or an OS without the source (Overwolf on Linux) just leaves one
 namespace stale, never a broken screen. Reads are instant and work offline.
 
-Files live under data/.wf_data/, one JSON per namespace. Each is wrapped in an
+Files live under app/.wf_data/, one JSON per namespace. Each is wrapped in an
 envelope that records WHEN it was written and the source's own mtime/version, so
 a refresher can decide "do I even need to re-fetch?" from a single cheap read.
 Writes go through core.atomic, so a crash mid-write can never corrupt a

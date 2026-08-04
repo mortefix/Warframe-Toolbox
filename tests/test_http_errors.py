@@ -12,7 +12,7 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 
 from core.market import http_error_message as msg
 

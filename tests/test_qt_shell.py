@@ -1,4 +1,4 @@
-"""Offscreen checks for the PySide6 shell (data/ui/).
+"""Offscreen checks for the PySide6 shell (app/ui/).
 
 Runs headless via QT_QPA_PLATFORM=offscreen, so it is safe in the normal
 suite. Skips cleanly when PySide6 is not installed - the Tk app is still the
@@ -12,7 +12,7 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 # This test navigates to EVERY nav key, and three of them are QtWebEngine
 # tabs. Chromium has no GPU surface offscreen, and a web view that fetched its

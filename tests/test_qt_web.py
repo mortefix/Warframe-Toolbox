@@ -28,7 +28,7 @@ import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 # Chromium has no GPU surface under the offscreen platform; without these it
 # loses its D3D context and takes the process down with SIGSEGV on exit.

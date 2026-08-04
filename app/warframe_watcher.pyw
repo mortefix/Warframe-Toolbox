@@ -23,7 +23,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent          # the data/ folder
+ROOT = Path(__file__).resolve().parent          # the app/ folder
 SETTINGS = ROOT / ".wfm_settings.json"
 TOOLBOX = ROOT.parent / "Warframe Toolbox.pyw"  # launcher lives in the root
 APP_TITLE = "Warframe Toolbox"

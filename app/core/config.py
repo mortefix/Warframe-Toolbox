@@ -258,7 +258,7 @@ def set_launcher(path) -> None:
     """
     global LAUNCHER_PYW
     LAUNCHER_PYW = path
-WATCHER_PYW = ROOT / "warframe_watcher.pyw"           # watcher lives in data/
+WATCHER_PYW = ROOT / "warframe_watcher.pyw"           # watcher lives in app/
 
 
 def _pythonw() -> str:

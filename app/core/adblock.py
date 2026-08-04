@@ -16,7 +16,7 @@ Two engines consume it:
 Same host-suffix semantics either way - verified 1:1 against live overframe.gg
 during the Phase 1.5 spike.
 
-`data/adblock-hosts.txt` (one host per line, # comments) extends the list
+`app/adblock-hosts.txt` (one host per line, # comments) extends the list
 without touching code.
 """
 
@@ -32,7 +32,7 @@ DATA_DIR = Path(__file__).resolve().parent.parent
 # list is answered with a local 403 instead of hitting the network (the
 # same mechanism browser ad blockers use). Chrome/Firefox extensions can't
 # be loaded - pywebview creates the WebView2 environment without extension
-# support - so the list lives here. `data/adblock-hosts.txt` (one host per
+# support - so the list lives here. `app/adblock-hosts.txt` (one host per
 # line, # comments) extends it without touching code.
 ADBLOCK_HOSTS = (
     # ad exchanges / SSPs / ad servers

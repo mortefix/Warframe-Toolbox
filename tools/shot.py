@@ -9,7 +9,7 @@ Usage: QT_SCALE_FACTOR=0.6667 python tools/shot.py market 1280 680 out.png
 import os, sys
 os.environ.pop("QT_QPA_PLATFORM", None)          # native platform, real fonts
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "data"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "app"))
 
 page, w, h, out = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]
 from PySide6.QtGui import QFontDatabase

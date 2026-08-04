@@ -3,7 +3,7 @@ injected and time.sleep is captured, so retry/backoff is exercised instantly."""
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 import requests
 from core import wf_http
 

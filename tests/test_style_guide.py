@@ -10,7 +10,7 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from pathlib import Path
 
-UI = Path(__file__).resolve().parent.parent / "data" / "ui"
+UI = Path(__file__).resolve().parent.parent / "app" / "ui"
 fails = []
 
 
@@ -29,8 +29,8 @@ print("colour discipline")
 # appear in any source file EXCEPT core/theme.py (the palette itself). This is
 # what makes theming possible - a colour hardcoded anywhere would not switch
 # with the theme. Covers hex (#rgb and #rrggbb), rgb()/rgba(), and CSS colour
-# NAMES used as a style value. Scans data/ui/ AND data/core/ (minus theme.py).
-CORE = Path(__file__).resolve().parent.parent / "data" / "core"
+# NAMES used as a style value. Scans app/ui/ AND app/core/ (minus theme.py).
+CORE = Path(__file__).resolve().parent.parent / "app" / "core"
 colour_src = dict(text)                       # the ui/*.py already loaded
 for f in sorted(CORE.glob("*.py")):
     if f.name != "theme.py":

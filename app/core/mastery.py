@@ -16,7 +16,7 @@ from __future__ import annotations
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent      # data/
+ROOT = Path(__file__).resolve().parent.parent      # app/
 BADGE_DIR = ROOT / ".mastery_badges"
 _UA = {"User-Agent": "WarframeToolbox (personal fan tool; wiki.warframe.com)"}
 _BADGE_URL = "https://wiki.warframe.com/images/IconRank{n}.png"

@@ -210,7 +210,7 @@ the browser stays alive for the whole session: while a web app is open its
 browser is re-parented into the Tk content pane, and when you switch away it
 parks in a hidden holder frame — still running — so coming back is instant
 and the page keeps its state (scroll position, logins). Cookies and cache
-persist across launches in `data/.webview/`, managed on its own settings
+persist across launches in `app/.webview/`, managed on its own settings
 page (below). If `pywebview` isn't installed the pages show an **Open in
 browser** fallback instead (`pip install pywebview` to enable embedding).
 
@@ -232,7 +232,7 @@ extensions can't be loaded in this environment, so the blocker is native):
    slips through during launch. Built-in host list (AdThrive/Raptive —
    overframe.gg's ad network, scraped from its live DOM — plus the ad
    exchanges, video monetizers and trackers). To extend it, create
-   `data/adblock-hosts.txt` yourself (one host per line, `#` comments) —
+   `app/adblock-hosts.txt` yourself (one host per line, `#` comments) —
    it does not ship, and is read at launch if present.
 2. **Cosmetic**: a script injected at document start (and on every
    navigation) **removes ad containers from the page** (removal blocked →
@@ -329,14 +329,14 @@ plain text — and every control sits left of its descriptive text.
 
 The root stays clean by design — just the launcher, this README, and
 `CLAUDE.md` (notes for AI assistants working on the code); the app, its
-modules, and every file it generates live under `data/`.
+modules, and every file it generates live under `app/`.
 
 ```
 Warframe Toolbox/
 ├─ Warframe Toolbox.pyw       # double-click launcher (no console) — start here
 ├─ README.md                  # this file
 ├─ CLAUDE.md                  # architecture + invariants, for AI assistants
-└─ data/
+└─ app/
    ├─ wf_market_helper.py     # the host app (Tkinter GUI)
    ├─ warframe_watcher.pyw    # background watcher: opens the app with the game
    ├─ registry.py             # the tool catalogue; add new tools here
@@ -413,16 +413,16 @@ is linked.
 Requires Python 3.10+ (Tkinter ships with the standard Windows installer).
 
 ```
-pip install -r data/requirements.txt
+pip install -r requirements.txt
 ```
 
 Then just **double-click `Warframe Toolbox.pyw`** — the `.pyw` extension runs
 under `pythonw.exe`, so the app opens as a standalone window with no terminal
 behind it. (If a startup error ever occurs before the window opens, it's
-written to `data/launch-error.log` and shown in a dialog, since there's no
+written to `app/launch-error.log` and shown in a dialog, since there's no
 console to print to.)
 
-From a terminal you can still run `python data/wf_market_helper.py` (a console will
+From a terminal you can still run `python app/wf_market_helper.py` (a console will
 be attached). A single-file `.exe` is intentionally not shipped: the tools are
 launched as `python` subprocesses, which a frozen build can't provide without
 extra plumbing — the `.pyw` gives the same no-console result and keeps the

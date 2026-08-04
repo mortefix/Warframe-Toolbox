@@ -695,7 +695,7 @@ class MainWindow(QWidget):
         # wipe that leaves ~195 MB of old cookies and history behind is a
         # wipe the user cannot trust
         import shutil
-        shutil.rmtree(ROOT / "data" / ".webview", ignore_errors=True)
+        shutil.rmtree(ROOT / ".webview", ignore_errors=True)
         core_config.set_start_with_windows(False)
         core_config.set_watch_warframe(False)
         self.settings.clear()

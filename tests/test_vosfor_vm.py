@@ -10,7 +10,7 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 import time
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 from core import vosfor, vosfor_vm as vm, wf_inventory
 
 fails = []
