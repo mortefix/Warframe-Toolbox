@@ -1,0 +1,9 @@
+requests
+websocket-client
+
+# Essentials is the toolkit; Addons carries QtWebEngine, which the three
+# embedded web apps run on. Addons is much the larger of the two - it is a
+# Chromium build - but it is also what lets the web tabs work on Linux, which
+# Edge WebView2 never could.
+PySide6-Essentials
+PySide6-Addons

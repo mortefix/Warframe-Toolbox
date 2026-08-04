@@ -1,0 +1,28 @@
+{
+  "manifest_version": 1,
+  "type": "WebApp",
+  "meta": {
+    "name": "Warframe Toolbox Companion",
+    "version": "0.1.0",
+    "minimum-overwolf-version": "0.153",
+    "author": "Mortefix",
+    "icon": "icon.png",
+    "icon_gray": "icon.png",
+    "description": "Reads Warframe inventory through Overwolf's Game Events and writes it to disk for Warframe Toolbox. No overlay, no screen capture, no game files touched."
+  },
+  "permissions": ["GameInfo", "FileSystem"],
+  "data": {
+    "start_window": "background",
+    "game_events": [8954],
+    "game_targeting": { "type": "dedicated", "game_ids": [8954] },
+    "launch_events": [
+      { "event": "GameLaunch", "event_data": { "game_ids": [8954] } }
+    ],
+    "windows": {
+      "background": {
+        "file": "background.html",
+        "is_background_page": true
+      }
+    }
+  }
+}

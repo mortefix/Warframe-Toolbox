@@ -1,0 +1,16 @@
+# User data — NEVER commit (contains the warframe.market JWT).
+# Default data root is %LOCALAPPDATA%\WarframeToolbox (outside the repo);
+# userdata/ is the opt-in portable-data override used by dev clones.
+userdata/
+
+# Legacy runtime-data locations (pre-restructure trees; safety net)
+data/.*
+data/launch-error.log
+app/.*
+app/launch-error.log
+.wftoolbox.lock
+launch-error.log
+
+# Python
+__pycache__/
+*.py[cod]

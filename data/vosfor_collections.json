@@ -1,0 +1,1350 @@
+{
+ "Cavia": {
+  "vosfor": 200,
+  "credits": 50000,
+  "tiers": {
+   "Uncommon": {
+    "tier_pct": 45.0,
+    "per_arcane_pct": 22.5,
+    "arcanes": [
+     {
+      "name": "Melee Fortification",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ArmorOnMeleeKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.92,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Melee Retaliation",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeDamageForActiveShields",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.92,
+      "farm_note": "Mission drop"
+     }
+    ]
+   },
+   "Rare": {
+    "tier_pct": 50.0,
+    "per_arcane_pct": 5.5556,
+    "arcanes": [
+     {
+      "name": "Arcane Battery",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MaxEnergyForArmor",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.813,
+      "farm_note": "Boss kill"
+     },
+     {
+      "name": "Arcane Ice Storm",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AbilityPowerOnFreeze",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.813,
+      "farm_note": "Boss kill"
+     },
+     {
+      "name": "Melee Afflictions",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/DuplicateStatusOnKnock",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.813,
+      "farm_note": "Boss kill"
+     },
+     {
+      "name": "Melee Animosity",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HeavyCritOnRegularMelee",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.724,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Melee Exposure",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CorrosiveMeleePerAbilityCast",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.724,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Melee Influence",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeProcsSpread",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.724,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Melee Vortex",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PullEnemiesOnMeleeKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.724,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Secondary Fortifier",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/OverguardSteal",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.868,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Secondary Surge",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/BonusDamageNextShotForCurEnergy",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.813,
+      "farm_note": "Boss kill"
+     }
+    ]
+   },
+   "Legendary": {
+    "tier_pct": 5.0,
+    "per_arcane_pct": 2.5,
+    "arcanes": [
+     {
+      "name": "Melee Crescendo",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PermaComboOnFinisher",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.993,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Melee Duplicate",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ReplayLightCritHits",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.993,
+      "farm_note": "Mission drop"
+     }
+    ]
+   }
+  }
+ },
+ "Duviri": {
+  "vosfor": 200,
+  "credits": 50000,
+  "tiers": {
+   "Uncommon": {
+    "tier_pct": 45.0,
+    "per_arcane_pct": 22.5,
+    "arcanes": [
+     {
+      "name": "Arcane Intention",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/HealthWhileUsingChanneledAbilities",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.742,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Magus Aggress",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/OperatorHeavyMeleeDamageOnTransference",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.742,
+      "farm_note": "Duviri endless"
+     }
+    ]
+   },
+   "Rare": {
+    "tier_pct": 50.0,
+    "per_arcane_pct": 7.1429,
+    "arcanes": [
+     {
+      "name": "Arcane Power Ramp",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AbilityStrengthOnCast",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.742,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Primary Blight",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryHeadshotCritMultOnHeadshot",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.868,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Primary Exhilarate",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryEnergyRegenOnImpactProc",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.742,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Primary Obstruct",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryJamEnemyWeaponsOnMagneticProc",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.742,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Shotgun Vendetta",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ShotgunMultishotAndReloadSpeedOnCloseKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.742,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Akimbo Slip Shot",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AmmoEfficiencyOnSliding",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.742,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Secondary Outburst",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MultishotForCombo",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.742,
+      "farm_note": "Duviri endless"
+     }
+    ]
+   },
+   "Legendary": {
+    "tier_pct": 5.0,
+    "per_arcane_pct": 1.6667,
+    "arcanes": [
+     {
+      "name": "Arcane Reaper",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HealthRegenAndArmorOnMeleeKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.987,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Longbow Sharpshot",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/LongbowDamageOnHeadshot",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.987,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Secondary Shiver",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryExtraDamagePerFreezeStack",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.987,
+      "farm_note": "Duviri endless"
+     }
+    ]
+   }
+  }
+ },
+ "Eidolon": {
+  "vosfor": 200,
+  "credits": 50000,
+  "tiers": {
+   "Common": {
+    "tier_pct": 40.0,
+    "per_arcane_pct": 6.6667,
+    "arcanes": [
+     {
+      "name": "Arcane Consequence",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/GolemArcaneAimGlideOnHeadshot",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.637,
+      "farm_note": "Railjack rotation"
+     },
+     {
+      "name": "Arcane Ice",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/FireProcResist",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.813,
+      "farm_note": "Boss kill"
+     },
+     {
+      "name": "Arcane Momentum",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcaneSniperSpeedOnCrit",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.637,
+      "farm_note": "Railjack rotation"
+     },
+     {
+      "name": "Arcane Nullifier",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/MagneticProcResist",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.637,
+      "farm_note": "Railjack rotation"
+     },
+     {
+      "name": "Arcane Tempo",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcaneShotgunSpeedOnCrit",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.676,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Warmth",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/FreezeProcResist",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.637,
+      "farm_note": "Railjack rotation"
+     }
+    ]
+   },
+   "Uncommon": {
+    "tier_pct": 35.0,
+    "per_arcane_pct": 2.6923,
+    "arcanes": [
+     {
+      "name": "Arcane Acceleration",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/LongGunSpeedOnCrit",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.5,
+      "farm_note": "Railjack rotation"
+     },
+     {
+      "name": "Arcane Agility",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/SpeedOnDamage",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.619,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Arcane Awakening",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/PistolDamageOnReload",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.671,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Deflection",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/SlashProcResist",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.619,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Arcane Eruption",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/RadialKnockdownOnEnergyPickup",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.619,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Arcane Guardian",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/ArmourOnDamage",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.618,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Healing",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/RadiationProcResist",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.619,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Arcane Phantasm",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/SpeedOnParry",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.619,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Arcane Resistance",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/ElectricityProcResist",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.619,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Arcane Strike",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeSpeedOnHit",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.671,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Trickery",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/InvisibilityOnFinisher",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.775,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Velocity",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcanePistolSpeedOnCrit",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.739,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Victory",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HealthRegenOnHeadshot",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.5,
+      "farm_note": "Railjack rotation"
+     }
+    ]
+   },
+   "Rare": {
+    "tier_pct": 20.0,
+    "per_arcane_pct": 2.5,
+    "arcanes": [
+     {
+      "name": "Arcane Aegis",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/GolemArcaneShieldRegenOnDamage",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.382,
+      "farm_note": "Deep Archimedea"
+     },
+     {
+      "name": "Arcane Arachne",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/GolemArcaneBonusDamageOnWallLatch",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.619,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Arcane Avenger",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/CritChanceOnDamage",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.519,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Fury",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcaneMeleeDamageOnCrit",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.573,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Precision",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcanePistolDamageOnHeadshot",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.43,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Arcane Pulse",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/RadialHealOnHealthPickup",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.619,
+      "farm_note": "Duviri endless"
+     },
+     {
+      "name": "Arcane Rage",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/LongGunDamageOnHeadshot",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.573,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Ultimatum",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GolemArcaneArmorOnFinisher",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.619,
+      "farm_note": "Duviri endless"
+     }
+    ]
+   },
+   "Legendary": {
+    "tier_pct": 5.0,
+    "per_arcane_pct": 1.6667,
+    "arcanes": [
+     {
+      "name": "Arcane Barrier",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/InstantShieldOnDamage",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.29,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Energize",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/GolemArcaneRadialEnergyOnEnergyPickup",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.29,
+      "farm_note": "Eidolon night"
+     },
+     {
+      "name": "Arcane Grace",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/HealthRegenOnDamage",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.29,
+      "farm_note": "Eidolon night"
+     }
+    ]
+   }
+  }
+ },
+ "Holdfasts": {
+  "vosfor": 200,
+  "credits": 50000,
+  "tiers": {
+   "Rare": {
+    "tier_pct": 100.0,
+    "per_arcane_pct": 5.2632,
+    "arcanes": [
+     {
+      "name": "Arcane Blessing",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/IncreaseMaxHealthOnHealthPickup",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.874,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Arcane Rise",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/LongGunDamageOnReload",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.802,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Molt Augmented",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PowerStrengthOnKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Molt Efficiency",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/WarframeOnShieldUptimePowerDuration",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Molt Reconstruct",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/HealAlliesOnEnergySpent",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Molt Vigor",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/WarframeOnOperatorAbilityPowerStrength",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Fractalized Reset",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/PrimaryOnAbilityReloadSpeed",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Primary Frostbite",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryCritDmgAndMultishotOnColdProc",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.874,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Cascadia Accuracy",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnRollCritChanceOnHeadshot",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Cascadia Empowered",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnStatusProcBonusDamage",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Cascadia Flare",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnHeatProc",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Cascadia Overcharge",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/SecondaryOnOvershieldCritChance",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Conjunction Voltage",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryReloadSpeedAndMultishotOnElectricProc",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.868,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Emergence Dissipate",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/EnergyOnGhostDissipate",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Emergence Renewed",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/OperatorOnEnergyDepletedRegenEnergy",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Emergence Savior",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/OperatorOnDeathInvulnerability",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Eternal Eradicate",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/OperatorOnOperatorAbilityIncreaseDamage",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Eternal Logistics",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/AmpOnVoidSlingAmpAmmoEfficiency",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     },
+     {
+      "name": "Eternal Onslaught",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Zariman/AmpOnEnergyDepletedCritChance",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.247,
+      "farm_note": "Elite enemy"
+     }
+    ]
+   }
+  }
+ },
+ "Höllvania": {
+  "vosfor": 200,
+  "credits": 50000,
+  "tiers": {
+   "Rare": {
+    "tier_pct": 95.0,
+    "per_arcane_pct": 11.875,
+    "arcanes": [
+     {
+      "name": "Arcane Bellicose",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AbilityStrengthForMaxHealth",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.907,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Arcane Camisado",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AbilityStrengthOnSummonAttack",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.907,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Arcane Crepuscular",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/AbilityStrengthAndCritDamageWhenInvisible",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.907,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Arcane Impetus",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/AbilityStatusProcsGiveAbilityStrengthAndEfficiency",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.907,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Arcane Truculence",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/RadialViralAttackOnOverguardGain",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.907,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Melee Doughty",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CritDamageForPunctureStatus",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.907,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Primary Crux",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/StatusAndAmmoEfficiencyOnWeakpointHit",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.907,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Secondary Enervate",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryCritOnHit",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.907,
+      "farm_note": "Open-world"
+     }
+    ]
+   },
+   "Legendary": {
+    "tier_pct": 5.0,
+    "per_arcane_pct": 1.6667,
+    "arcanes": [
+     {
+      "name": "Arcane Escapist",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/InvulnerabilityOnDeathOnMercyKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.936,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Arcane Hot Shot",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AbilityHeatProcsGiveCritChance",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.936,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Arcane Universal Fallout",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/AbilityRadiationProcsCreateUniversalOrbsOnKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.936,
+      "farm_note": "Mission drop"
+     }
+    ]
+   }
+  }
+ },
+ "Necralisk": {
+  "vosfor": 200,
+  "credits": 50000,
+  "tiers": {
+   "Rare": {
+    "tier_pct": 100.0,
+    "per_arcane_pct": 8.3333,
+    "arcanes": [
+     {
+      "name": "Arcane Double Back",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Defensive/DamageResistanceStacksOverTime",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.692,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Arcane Steadfast",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/NoCostCastChanceOnCast",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.692,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Theorem Contagion",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/OrbsOnResidualContact",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.977,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Theorem Demulcent",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/WeaponDamageOnResidualContact",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 1.0,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Theorem Infection",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CompanionDamageOnResidualContact",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.996,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Primary Plated Round",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamagePerAmmoOnReload",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.692,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Secondary Encumber",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/ExtraProcOnProc",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.868,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Secondary Kinship",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryCritChancePerBuff",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.692,
+      "farm_note": "Mission drop"
+     },
+     {
+      "name": "Residual Boils",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/BurningCystOnKill",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 1.0,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Residual Malodor",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/IceMistOnKill",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 1.0,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Residual Shock",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/LightningStrikeOnKill",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.996,
+      "farm_note": "Open-world"
+     },
+     {
+      "name": "Residual Viremia",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/ToxicBloodOnKill",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.996,
+      "farm_note": "Open-world"
+     }
+    ]
+   }
+  }
+ },
+ "Ostron": {
+  "vosfor": 200,
+  "credits": 50000,
+  "tiers": {
+   "Common": {
+    "tier_pct": 10.0,
+    "per_arcane_pct": 2.5,
+    "arcanes": [
+     {
+      "name": "Magus Husk",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/ArmourOnOperatorMode",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Vigor",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HealthOnOperatorMode",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Virtuos Null",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/OperatorAmmoRegenOnKill",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Virtuos Tempo",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/AttackSpeedOnKill",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     }
+    ]
+   },
+   "Uncommon": {
+    "tier_pct": 30.0,
+    "per_arcane_pct": 4.2857,
+    "arcanes": [
+     {
+      "name": "Exodia Triumph",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/StatusChannelingDamage",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Exodia Valor",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/CritChannelingDamage",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Cadence",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/SpeedOnVoidDash",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Cloud",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/ImmunityFallDamageOnVoidDash",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Replenish",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HealOnVoidDash",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Virtuos Fury",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/IncreasedDamageOnStatusProc",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Virtuos Strike",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/IncreasedCriticalDamageOnCriticalStrike",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     }
+    ]
+   },
+   "Rare": {
+    "tier_pct": 60.0,
+    "per_arcane_pct": 7.5,
+    "arcanes": [
+     {
+      "name": "Exodia Brave",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ChannelKillEnergyRate",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Exodia Force",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/StatusTriggerRadialDamage",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Exodia Hunt",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/GroundSlamPull",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Exodia Might",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/FinisherLifesteal",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Elevate",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HealOnTransferenceIn",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Nourish",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HealOnTransferenceOut",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Virtuos Ghost",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/StatusChanceOnHeadshot",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Virtuos Shadow",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/CriticalChanceOnHeadshot",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     }
+    ]
+   }
+  }
+ },
+ "Solaris": {
+  "vosfor": 200,
+  "credits": 50000,
+  "tiers": {
+   "Common": {
+    "tier_pct": 60.0,
+    "per_arcane_pct": 8.5714,
+    "arcanes": [
+     {
+      "name": "Magus Accelerant",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HeatResistOnBlast",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Anomaly",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/PullOnTransferenceIn",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Drive",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HoverboardSpeedOnTransferenceIn",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Firewall",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/DamageReductionOnVoidMode",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Overload",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/RobotStunOnBlast",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Virtuos Spike",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/VoidToPunctureDamage",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Virtuos Surge",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/VoidToElectricDamage",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     }
+    ]
+   },
+   "Uncommon": {
+    "tier_pct": 30.0,
+    "per_arcane_pct": 7.5,
+    "arcanes": [
+     {
+      "name": "Magus Glitch",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/NoPenaltyOnDeath",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Repair",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HealOnVoidMode",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Virtuos Forge",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/VoidToHeatDamage",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Virtuos Trojan",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorAmps/VoidToViralDamage",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     }
+    ]
+   },
+   "Rare": {
+    "tier_pct": 10.0,
+    "per_arcane_pct": 1.25,
+    "arcanes": [
+     {
+      "name": "Pax Bolt",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/EnergyEfficiencyOnHeadshot",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Pax Charge",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Utility/BulletToBattery",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Pax Seeker",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SeekerProjOnHeadshotKill",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Pax Soar",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/EyeInTheSky",
+      "max_copies": 10,
+      "ranks": 4,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Destruct",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/ProcResistOnBlast",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Lockdown",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/TetherMineOnDash",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Melt",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/HeatDamageOnDash",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     },
+     {
+      "name": "Magus Revert",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/OperatorArmour/ReverseOnDash",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.05,
+      "farm_note": "Standing only"
+     }
+    ]
+   }
+  }
+ },
+ "Steel": {
+  "vosfor": 200,
+  "credits": 50000,
+  "tiers": {
+   "Rare": {
+    "tier_pct": 100.0,
+    "per_arcane_pct": 9.0909,
+    "arcanes": [
+     {
+      "name": "Arcane Blade Charger",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/MeleeDmgOnRifleKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.403,
+      "farm_note": "Arbitration"
+     },
+     {
+      "name": "Arcane Bodyguard",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/HealCompanionOnSixMeleeKills",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.403,
+      "farm_note": "Arbitration"
+     },
+     {
+      "name": "Arcane Pistoleer",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/AmmoEfficiencyOnPistolHeadshot",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.403,
+      "farm_note": "Arbitration"
+     },
+     {
+      "name": "Arcane Primary Charger",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDmgOnMeleeKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.403,
+      "farm_note": "Arbitration"
+     },
+     {
+      "name": "Arcane Tanker",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/ArmorOnHeavyGunEquipped",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.403,
+      "farm_note": "Arbitration"
+     },
+     {
+      "name": "Primary Deadhead",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamageOnNoMelee",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.469,
+      "farm_note": "Acolyte-gated"
+     },
+     {
+      "name": "Primary Dexterity",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamageOnMeleeKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.469,
+      "farm_note": "Acolyte-gated"
+     },
+     {
+      "name": "Primary Merciless",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/PrimaryDamageOnKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.469,
+      "farm_note": "Acolyte-gated"
+     },
+     {
+      "name": "Secondary Deadhead",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnNoMelee",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.469,
+      "farm_note": "Acolyte-gated"
+     },
+     {
+      "name": "Secondary Dexterity",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnMeleeKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.469,
+      "farm_note": "Acolyte-gated"
+     },
+     {
+      "name": "Secondary Merciless",
+      "path": "/Lotus/Upgrades/CosmeticEnhancers/Offensive/SecondaryDamageOnKill",
+      "max_copies": 21,
+      "ranks": 6,
+      "farm_ease": 0.469,
+      "farm_note": "Acolyte-gated"
+     }
+    ]
+   }
+  }
+ }
+}
