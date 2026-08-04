@@ -10,7 +10,7 @@ Market page) stream their output into a console.
 
 **The host owns the account AND all networking.** You link your
 warframe.market account once in the app. Your password is used for a single
-sign-in request and never stored — the cached session (`.wfm_session.json`)
+sign-in request and never stored — the cached session (`wfm_session.json`)
 holds the token (JWT), username, platform, and the login email (kept only to
 prefill the sign-in form), and the JWT never leaves the host process. Every API call
 a tool makes is routed through the host's local gateway, which injects the
@@ -110,7 +110,7 @@ A read-only browser of warframe.market itself, in three tabs:
   quirk. Read-only — bidding stays on the site.
 - **Watchlist** — your bookmarked items. One click **Open** jumps back to the
   full order book (no re-searching); **↻ Refresh prices** fills in each item's
-  best online sell/buy. Persisted in `.wfm_watchlist.json`.
+  best online sell/buy. Persisted in `wfm_watchlist.json`.
 
 Works with or without a linked account (public reads need no session).
 
@@ -162,7 +162,7 @@ get another way isn't worth Vosfor:
   needed`), not one copy, because a 2p arcane you need 21 of is 42p. Prices
   are the cheapest online sell for the unranked copy, fetched live through
   the host's own market client (same rate limiter; the gateway is the
-  tool-subprocess road only) and cached to `.vosfor_prices.json` (first enable runs a
+  tool-subprocess road only) and cached to `vosfor_prices.json` (first enable runs a
   one-time background sweep with progress). **↻ prices** re-runs the sweep
   on demand, and the row shows how old the cached prices are. A buy-out under ~60p is cheap
   enough that the market beats Vosfor; the row shows that total, teal when
@@ -182,7 +182,7 @@ Data sources:
   process by `core/aes.py` — pure Python, no crypto dependency shipped and no
   OS binding either; `core/arcane_inv.py`).
   Nothing is ever written to AlecaFrame or the game. The parsed inventory is
-  **cached** to `.arcane_inv.json`: opening Vosfor re-reads **only when
+  **cached** to `arcane_inv.json`: opening Vosfor re-reads **only when
   AlecaFrame's file has actually changed** (a timestamp check — switching
   apps stays instant), a fresh cache loads with no decrypt at all, and the
   last good inventory survives even if AlecaFrame disappears (shown as
@@ -190,7 +190,7 @@ Data sources:
   re-read on demand and reports whether anything changed.
 - Without AlecaFrame, every arcane starts unchecked and you **tick them off
   by hand** (click an arcane to cycle maxed / clear; saved to
-  `.vosfor_owned.json`). Manual check-offs always override the auto-read.
+  `vosfor_owned.json`). Manual check-offs always override the auto-read.
 
 ## Web apps (WF Live · Wiki · Overframe)
 
@@ -210,7 +210,7 @@ the browser stays alive for the whole session: while a web app is open its
 browser is re-parented into the Tk content pane, and when you switch away it
 parks in a hidden holder frame — still running — so coming back is instant
 and the page keeps its state (scroll position, logins). Cookies and cache
-persist across launches in `app/.webview/`, managed on its own settings
+persist across launches in the data home's `webengine/` profile, managed on its own settings
 page (below). If `pywebview` isn't installed the pages show an **Open in
 browser** fallback instead (`pip install pywebview` to enable embedding).
 
@@ -293,16 +293,12 @@ plain text — and every control sits left of its descriptive text.
   mid-session and shrink the UI), so on a scaled display Windows stretches
   it — and scrolling is moved in whole device pixels to keep that stretch
   from smearing rows.
-- **Data > Warframe** — the local game account (read from the game's own
-  `%LOCALAPPDATA%\Warframe\EE.log`, strictly read-only; see
-  `core/wf_local.py`): in-game username + launcher, data-access status, when
-  the game last updated the data, and the install location with Auto-detect /
-  Browse…. **Nothing re-reads automatically**: the one read taken when the
-  page opens caches the file's modified timestamp (`.wf_local.json`) so a
-  future *Update* button can compare cached vs current stamps
-  (`wf_local.is_stale()`) before reading again. Note the game rewrites EE.log
-  every session — until you log in, the page honestly reports "no login found
-  in game data".
+- **Data > Warframe** — the game install location with Auto-detect / Browse…
+  (stored in `wf_local.json`; every game-file access in the app is strictly
+  read-only — see `core/wf_local.py`), plus your **Warframe.com account**:
+  the public account ID + platform that let the Toolbox read your profile
+  (mastery rank, loadout, progression) straight from Warframe's own servers,
+  with a Connect dialog that captures the ID automatically.
 - **Data > Market** — your warframe.market profile: connected account,
   session validity, expanded online status (state **and** socket connection,
   updates live), active order counts (WTS / WTB), the **Unlink**
@@ -319,7 +315,7 @@ plain text — and every control sits left of its descriptive text.
 - **Data > WF Toolbox** — every file the app generates about you, listed with
   size and purpose. Click a name to open it in your default editor; ✕ deletes
   a single file (deleting the session file does a proper unlink). Below:
-  **Delete cached images** (empties `.cache/thumbs/` — downloaded item
+  **Delete cached images** (empties `cache/thumbs/` — downloaded item
   images only, never program assets) and **Delete ALL user data** (unlink +
   wipe every generated file, watchlist, floors/caps, settings, startup
   entry). Both buttons are pinned to the bottom of the page, and both wipes
@@ -327,55 +323,58 @@ plain text — and every control sits left of its descriptive text.
 
 ## Layout
 
-The root stays clean by design — just the launcher, this README, and
-`CLAUDE.md` (notes for AI assistants working on the code); the app, its
-modules, and every file it generates live under `app/`.
+The repository is pure code and shipped assets — it can be cloned, pulled,
+zipped or run from a flash drive without ever carrying personal data. Every
+file the app generates about you lives in a per-machine data home instead:
+`%LOCALAPPDATA%\WarframeToolbox` (a gitignored `userdata/` folder inside the
+project opts a dev clone into portable data; see `docs/DEVELOPMENT.md`).
 
 ```
 Warframe Toolbox/
 ├─ Warframe Toolbox.pyw       # double-click launcher (no console) — start here
+├─ update.bat                 # pull the latest, then launch (the beta channel)
+├─ requirements.txt           # deps: requests, websocket-client, PySide6
 ├─ README.md                  # this file
-├─ CLAUDE.md                  # architecture + invariants, for AI assistants
+├─ CLAUDE.md                  # working agreements, for AI assistants
+├─ docs/                      # ARCHITECTURE, DEVELOPMENT, STYLE_GUIDE, OVERWOLF_PLAN
+├─ tests/                     # 33 plain-script test files (run_all.py)
+├─ overwolf-companion/        # Overwolf companion app template (pending approval)
 └─ app/
-   ├─ wf_market_helper.py     # the host app (Tkinter GUI)
-   ├─ warframe_watcher.pyw    # background watcher: opens the app with the game
    ├─ registry.py             # the tool catalogue; add new tools here
-   ├─ requirements.txt        # deps (requests, websocket-client, pywebview
-   │                          #  — which pulls in pythonnet on Windows)
-   ├─ core/
-   │  ├─ session.py           # account link: login, token cache, validation
-   │  ├─ market.py            # host's own authenticated v2 client
-   │  ├─ presence.py          # online-status websocket (online/ingame/offline)
-   │  ├─ wf_local.py          # READ-ONLY reader for the game's local data
-   │  ├─ arcane_inv.py        # READ-ONLY arcane inventory (AlecaFrame cache)
-   │  ├─ arcane_market.py     # warframe.market arcane prices (cached)
-   │  ├─ wiki.py              # item name -> wiki article URL (Wiki tab links)
-   │  ├─ vosfor.py            # Vosfor planner: collections + efficiency
-   │  ├─ config.py            # app settings + user-data registry + Win startup
-   │  ├─ tray.py              # notification-area icon (minimize to tray)
-   │  ├─ webhost.py           # embedded web apps (Edge WebView2 in Tk panes)
-   │  ├─ assets.py            # embedded icons (base64: crest + platinum gem)
-   │  └─ gateway.py           # local API gateway - tools' only road to WFM
-   ├─ assets/
-   │  └─ logo.ico             # window / taskbar icon (multi-size crest)
-   ├─ tools/
-   │  └─ api_check/api_check.py   # read-only API health check
-   ├─ .wfm_session.json       # cached session (created on link; delete = unlink)
-   ├─ .wfm_listings.json      # My Listings prefs: floor/cap offsets + overrides
-   ├─ .wfm_watchlist.json     # Market watchlist
-   ├─ .wf_local.json          # Warframe install path + game-data timestamp
-   ├─ vosfor_collections.json # Arcane Collection data (drop chances, paths)
-   ├─ .vosfor_owned.json      # Vosfor planner manual check-offs
-   ├─ .vosfor_prices.json     # Vosfor planner cached market prices
-   ├─ .arcane_inv.json        # cached AlecaFrame arcane inventory
-   ├─ .wfm_settings.json      # app settings
-   ├─ .cache/thumbs/          # downloaded item images (Settings can purge)
-   └─ .webview/               # web apps' browser profile (cookies, cache)
+   ├─ warframe_watcher.pyw    # background watcher: opens the app with the game
+   ├─ vosfor_collections.json # shipped Vosfor data (drop chances, paths)
+   ├─ core/                   # backend + every UI-agnostic rule
+   │  ├─ paths.py             #   WHERE user data lives (the one module that knows)
+   │  ├─ version.py           #   the single source of the app version
+   │  ├─ session.py           #   account link: login, token cache, validation
+   │  ├─ market.py            #   authenticated warframe.market v2 client
+   │  ├─ gateway.py           #   local API gateway — tools' only road to WFM
+   │  ├─ presence.py          #   online-status websocket (online/ingame/offline)
+   │  ├─ wf_inventory.py      #   inventory provider seam (companion → AlecaFrame)
+   │  ├─ wf_profile.py        #   DE public profile API (mastery, loadout)
+   │  ├─ wf_local.py          #   READ-ONLY reader for the game's local files
+   │  └─ ...                  #   see docs/ARCHITECTURE.md for the full map
+   ├─ ui/                     # the PySide6 front end (app, home, market, ...)
+   ├─ tools/api_check/        # read-only API health check (runs via gateway)
+   └─ assets/                 # fonts (+ licenses/), window icon
+
+%LOCALAPPDATA%\WarframeToolbox\        (created on first launch)
+   ├─ wfm_session.json        # cached session (created on link; delete = unlink)
+   ├─ wfm_settings.json       # app settings
+   ├─ wfm_listings.json       # My Listings prefs: floor/cap offsets + overrides
+   ├─ wfm_watchlist.json      # Market watchlist  (+ contract watchlist)
+   ├─ wf_local.json           # Warframe install path override
+   ├─ vosfor_owned.json       # Vosfor planner manual check-offs (+ cached prices)
+   ├─ cache/thumbs/           # downloaded item images (Settings can purge)
+   ├─ wf_data/                # collected game data (profile, worldState, export)
+   ├─ webengine/              # embedded browser profile (cookies, logins)
+   └─ inventory.json          # written by the Overwolf companion, when present
 ```
 
-> The original standalone **Repricer** tool was retired — repricing is now a
-> built-in feature of **My Listings** (below); its old `tools/repricer/`
-> directory has been deleted.
+> Under **Microsoft Store Python** the data home is transparently redirected
+> into the Python package's `LocalCache` folder (MSIX virtualization) — the
+> app behaves identically, but Explorer won't show the files at the path
+> above. Details and the fix in `docs/ARCHITECTURE.md`.
 
 ## Host ↔ tool contract
 
@@ -410,7 +409,8 @@ is linked.
 
 ## Running
 
-Requires Python 3.10+ (Tkinter ships with the standard Windows installer).
+Requires Python 3.11+ (python.org build recommended — see the Store-Python
+note in `docs/ARCHITECTURE.md`).
 
 ```
 pip install -r requirements.txt
@@ -419,14 +419,12 @@ pip install -r requirements.txt
 Then just **double-click `Warframe Toolbox.pyw`** — the `.pyw` extension runs
 under `pythonw.exe`, so the app opens as a standalone window with no terminal
 behind it. (If a startup error ever occurs before the window opens, it's
-written to `app/launch-error.log` and shown in a dialog, since there's no
-console to print to.)
+written to `launch-error.log` in the data home and shown in a dialog, since
+there's no console to print to.) On a beta-tester machine, launch via
+`update.bat` instead — it pulls the latest version first and still launches
+when offline.
 
-From a terminal you can still run `python app/wf_market_helper.py` (a console will
-be attached). A single-file `.exe` is intentionally not shipped: the tools are
-launched as `python` subprocesses, which a frozen build can't provide without
-extra plumbing — the `.pyw` gives the same no-console result and keeps the
-tools working.
+An `.exe` build (PyInstaller onedir) is planned; see `docs/DEVELOPMENT.md`.
 
 ## Getting started
 
@@ -481,7 +479,7 @@ reference price — the posted price when the session started, or the last
 price you set by hand — plus the global **± offset** in the header (default
 −2): `floor = reference + offset`. Typing a value into a card's floor field
 overrides it for that item (shown as *set*, persisted in
-`.wfm_listings.json`); clearing the field returns to *auto*.
+`wfm_listings.json`); clearing the field returns to *auto*.
 
 The top bar has **Refresh** (pull latest orders + market lows) and **Reprice
 all** (reprice every listing once — it confirms first, since it writes real

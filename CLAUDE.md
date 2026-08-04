@@ -39,9 +39,9 @@ If something cannot be measured, that is itself worth saying out loud.
 
 ```bash
 pip install -r requirements.txt   # requests, websocket-client, PySide6-{Essentials,Addons}
-python "Warframe Toolbox.pyw"          # launch (errors -> app/launch-error.log)
+python "Warframe Toolbox.pyw"          # launch (errors -> <data root>/launch-error.log)
 python -m py_compile app/ui/*.py app/core/*.py   # syntax sanity check
-python tests/run_all.py                            # 16 test files, no pytest needed
+python tests/run_all.py                            # 33 test files, no pytest needed
 ```
 
 Requires Python 3.11+. QtWebEngine (PySide6-Addons) carries the three embedded
@@ -51,24 +51,41 @@ unaffected. **Tkinter is no longer used anywhere.**
 ## Architecture
 
 ```
-Warframe Toolbox.pyw        launcher: chdir to app/, run host, log crashes
+Warframe Toolbox.pyw        launcher: paths.ensure_dirs + migrate_legacy, then ui.app.main
+update.bat                  beta channel: git pull --ff-only, then launch
 app/registry.py            tool catalogue: one Tool() entry = sidebar item + Home card
 app/warframe_watcher.pyw   standalone watcher process (launch Toolbox with the game)
 app/core/                  ALL backend AND all UI-agnostic rules:
-                            session, market, gateway, presence, webhost, config,
-                            wf_local, arcane_inv, arcane_market, aes, vosfor,
-                            wiki, tray, assets, theme, webapps, floors,
-                            repricer, vosfor_vm, listings_vm
+                            paths, version, config, session, market, gateway,
+                            presence, wf_local, wf_inventory, wf_profile,
+                            wf_http, worldstate, public_export, ee_events,
+                            collect, store, arcane_inv, arcane_market, aes,
+                            vosfor, wiki, bookmarks, adblock, mastery, assets,
+                            atomic, theme, webapps, floors, repricer, nav,
+                            home, market_vm, vosfor_vm, listings_vm
 app/ui/                    THE FRONT END: app (shell), home, listings, market,
-                            vosfor, settings, web, runner, dialogs, overlay,
-                            suggest, icons, qss, widgets, work, bridge
+                            vosfor, settings, web, wf_connect, runner, dialogs,
+                            overlay, suggest, icons, qss, widgets, work,
+                            bridge, dev_* (Settings > DevTools explorers)
 app/tools/<name>/          tool scripts, run as subprocesses through the gateway
 tests/                      plain-script test suite; `python tests/run_all.py`
+docs/                       ARCHITECTURE, DEVELOPMENT, STYLE_GUIDE, OVERWOLF_PLAN
 ```
 
+**User data never lives in the repo.** `core/paths.py` resolves the data root
+once at import (env override → gitignored `userdata/` portable override →
+`%LOCALAPPDATA%\WarframeToolbox`, XDG on Linux); every user-file constant
+derives from `paths.USERDATA` and file names carry **no dot prefix**
+(`wfm_session.json`). `paths.COMPANION_DIR` is always the platform dir — the
+Overwolf companion's fixed output contract, even in portable mode. The test
+runner exports `WFTOOLBOX_DATA` to a temp dir, so an un-monkeypatched
+read/write in a test hits throwaway data, never yours. Under Microsoft Store
+Python, `%LOCALAPPDATA%` writes are MSIX-virtualized into the package's
+LocalCache — see docs/ARCHITECTURE.md before reasoning about on-disk paths.
+
 **One front end.** `ui/` is the whole UI. The Tkinter host it replaced was
-deleted once every screen was ported; a copy sits in `_backup_tk_<date>/` for
-reference. `core/` may **never** import from `ui/` — the dependency runs one
+deleted once every screen was ported; git history has it if anything needs
+looking up. `core/` may **never** import from `ui/` — the dependency runs one
 way, and that one-way rule is what made a second front end affordable enough
 to build in the first place. Keep it that way.
 
@@ -316,20 +333,22 @@ traps exist in any toolkit; `_backup_tk_<date>/` has the code they describe.
 
 ## Gotchas
 
-- `USER_AGENT` in `core/session.py` is the app-wide client identity (WFM
-  rules require an honest one) — change it there only, everything imports it.
+- `USER_AGENT` derives from `core/version.py` (the single source of the app
+  version; WFM rules require an honest client identity). `session.py`
+  re-exports it, everything else imports from there. Bump `__version__`
+  only — never hand-edit a version string anywhere else.
 - UI code must use the public accessors `Presence.want` and
   `MarketClient.name_of(slug)` — never reach into `_want`/`_name_index`.
-- `.wfm_session.json` also stores the login EMAIL (form prefill), not just
+- `wfm_session.json` also stores the login EMAIL (form prefill), not just
   the JWT — the docstring and README document this. `chmod 600` is a no-op
   on Windows, so the folder's ACLs are the real protection (see "Known
   limitations"). Deleting the session file must route through
   `unlink_account()` (ToolboxDataPage special-cases this).
-- AlecaFrame inventory: `arcane_inv.read_arcanes_cached()` is the road in —
-  disk cache `.arcane_inv.json`, staleness = one stat() of lastData.dat's
-  mtime (`cache_is_stale`), falls back to the cache when AlecaFrame is gone.
+- Inventory: `wf_inventory.read_arcanes_cached()` is the road in (provider
+  seam: companion → AlecaFrame), staleness = one stat() of the source's
+  mtime (`cache_is_stale`), falls back to the cache when the source is gone.
   VosforView refreshes via `on_show()`; ↻ button forces (`force=True`).
-  Manual overrides (`.vosfor_owned.json`) always beat the auto-read.
+  Manual overrides (`vosfor_owned.json`) always beat the auto-read.
 - `bind_all("<MouseWheel>")` is last-writer-wins app-wide — `ScrollArea`
   handles it via `claim_wheel()` (from `on_show`) and `release_wheel()`
   (from `on_hide`, while still mapped). Never `unbind_all` from a hidden
@@ -364,7 +383,9 @@ traps exist in any toolkit; `_backup_tk_<date>/` has the code they describe.
   finds the Toolbox by exact window title "Warframe Toolbox".
 - HKCU Run entries bake in absolute pythonw.exe + folder paths — moving the
   folder leaves stale entries that still show as enabled.
-- `.vosfor_prices.json` never refreshes on its own — the Vosfor view shows
+  `config.repair_run_entries()` (wired into `ui.app.main`) re-writes only
+  BROKEN entries on every app start.
+- `vosfor_prices.json` never refreshes on its own — the Vosfor view shows
   the cache's age and ↻ Refresh prices re-runs the sweep.
 - A persistent view's `<Destroy>` never fires, so `on_hide()` is its ONLY
   teardown. Anything scheduled with `after`/`after_idle` that touches
@@ -381,14 +402,15 @@ traps exist in any toolkit; `_backup_tk_<date>/` has the code they describe.
 
 ## Known limitations (deliberate, documented)
 
-- **Session file ACLs**: `.wfm_session.json` (a trading credential) is only
-  as protected as the folder. Outside the user profile — e.g. on a data
-  drive — other local accounts may read it. `session.exposed_location()`
-  detects this and Settings > Data > WF Toolbox warns.
+- **Session file ACLs**: `wfm_session.json` (a trading credential) is only
+  as protected as the folder. The default data root sits in the user profile
+  (protected); a `WFTOOLBOX_DATA`/`userdata/` override on a wide-open drive
+  is only as private as that drive. `session.exposed_location()` detects
+  this and Settings > Data > WF Toolbox warns.
 - **Rate limits are split**: the gateway's 0.6s limiter covers tools; each
   host `MarketClient` spaces itself 0.35s independently, and thumbnail
   fetches skip spacing. Host + tools are not under one ceiling.
-- `.wfm_listings.json` floors/caps are keyed by slug and not account-scoped.
+- `wfm_listings.json` floors/caps are keyed by slug and not account-scoped.
 - Contracts tab is a placeholder; contract counts are not reported anywhere.
 
 

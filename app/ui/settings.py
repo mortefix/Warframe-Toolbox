@@ -496,9 +496,8 @@ class WarframePage(Page):
         super().__init__(view, "Warframe")
         lay = self.box("Install location")
         self.blurb(lay,
-                   "Where Warframe is installed. Used to read the "
-                   "game's own log for your account name and to spot "
-                   "when local data is stale.")
+                   "Where Warframe is installed. Recorded so features "
+                   "that need the game folder don't have to guess.")
         row = QHBoxLayout()
         self.entry = QLineEdit(str(wf_local.load_prefs().get("install_dir")
                                    or ""))
