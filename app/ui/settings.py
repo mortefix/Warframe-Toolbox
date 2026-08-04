@@ -1034,7 +1034,7 @@ class ToolboxPage(Page):
             return
         # deleting the session file behind the app's back would leave a live
         # client pointing at a token that no longer exists
-        if name == ".wfm_session.json" and self.view.session is not None:
+        if name == "wfm_session.json" and self.view.session is not None:
             self.view.unlink_account()
         elif not core_config.delete_user_file(path):
             self.say(f"{name} could not be deleted", "err")

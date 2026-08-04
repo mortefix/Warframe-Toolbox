@@ -31,6 +31,7 @@ from typing import Any
 import requests
 
 from core import atomic
+from core import paths
 from core import session as wfm_session
 
 API = wfm_session.API
@@ -649,7 +650,7 @@ class MarketClient:
 #   global_offset_buy  +/- applied to a BUY order's reference price to derive
 #                      its default cap (cap = reference + global_offset_buy)
 #   floors / caps      absolute per-item overrides in platinum, keyed by slug
-PREFS_PATH = wfm_session.ROOT / ".wfm_listings.json"
+PREFS_PATH = paths.USERDATA / "wfm_listings.json"
 
 GLOBAL_OFFSET_BUY_DEFAULT = 2      # willing to pay up to 2p over my set price
 
@@ -691,7 +692,7 @@ def save_prefs(prefs: dict) -> None:
 
 
 # The Market view's watchlist: bookmarked item slugs, in the order added.
-WATCHLIST_PATH = wfm_session.ROOT / ".wfm_watchlist.json"
+WATCHLIST_PATH = paths.USERDATA / "wfm_watchlist.json"
 
 
 def load_watchlist() -> list[str]:
@@ -713,7 +714,7 @@ def save_watchlist(slugs: list[str]) -> None:
 # front ends feed every entry to order_book(); a riven weapon is not an item
 # slug, so smuggling one in there would just produce a permanent "fetch
 # failed" row in an older build. A separate file keeps both readable by both.
-CONTRACT_WATCHLIST_PATH = wfm_session.ROOT / ".wfm_contract_watchlist.json"
+CONTRACT_WATCHLIST_PATH = paths.USERDATA / "wfm_contract_watchlist.json"
 
 
 def load_contract_watchlist() -> list[dict]:

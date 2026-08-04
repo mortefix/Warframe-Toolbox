@@ -61,7 +61,8 @@ from ui.widgets import bookmark_icon, glyph_icon, hairline, label, panel
 #: Measured live when a backgrounded test suite held this directory during a
 #: real launch. Hence `isolate_for_tests()` below and the QLockFile guard in
 #: ui/app.py: nothing but the one running app may ever open this path.
-PROFILE_DIR = Path(__file__).resolve().parent.parent / ".webengine"
+from core import paths as core_paths
+PROFILE_DIR = core_paths.USERDATA / "webengine"
 
 
 def isolate_for_tests() -> Path:

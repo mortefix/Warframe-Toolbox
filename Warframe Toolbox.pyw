@@ -43,7 +43,14 @@ os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS",
 #
 # Keep the FILENAME: config.LAUNCHER_PYW bakes it into the HKCU Run entries,
 # so renaming this file breaks autostart for anyone who enabled it.
+_paths = None
 try:
+    # The data root first: create it, then move any pre-restructure user
+    # files from app/ into it. Runs BEFORE any Qt import, so nothing can be
+    # holding the webengine profile mid-move.
+    from core import paths as _paths
+    _paths.ensure_dirs()
+    _paths.migrate_legacy()
     # autostart must register THIS file, which is the launcher
     from core import config as _config
     _config.set_launcher(_config.LAUNCHER_PYW)
@@ -53,8 +60,11 @@ except SystemExit:
     raise
 except BaseException:                                       # noqa: BLE001
     tb = traceback.format_exc()
+    # The log goes to the data root; if core.paths itself failed to import,
+    # fall back to a file beside the launcher so the trace is never lost.
+    _log_dir = str(_paths.USERDATA) if _paths is not None else HERE
     try:
-        with open(os.path.join(APP, "launch-error.log"), "w",
+        with open(os.path.join(_log_dir, "launch-error.log"), "w",
                   encoding="utf-8") as fh:
             fh.write(tb)
     except OSError:

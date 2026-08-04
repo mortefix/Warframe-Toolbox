@@ -27,13 +27,12 @@ from pathlib import Path
 from typing import Any
 
 from core import atomic
-
-ROOT = Path(__file__).resolve().parent.parent
+from core import paths
 
 #: One folder holds every collected namespace, so the Settings > Data page can
 #: show and wipe it as a single group (see config.WF_DATA_DIR), the way the
 #: thumbnail cache is handled - not as dozens of individual USER_FILES rows.
-WF_DATA_DIR = ROOT / ".wf_data"
+WF_DATA_DIR = paths.USERDATA / "wf_data"
 
 #: Envelope version. Bump ONLY if the envelope shape below changes; the payload
 #: under "data" is free to evolve without touching this.

@@ -28,8 +28,7 @@ import re
 from pathlib import Path
 from typing import BinaryIO
 from core import atomic
-
-ROOT = Path(__file__).resolve().parent.parent
+from core import paths
 
 # Where the game keeps its local data (fixed location, all launchers).
 LOG_DIR = Path(os.environ.get("LOCALAPPDATA", "")) / "Warframe"
@@ -40,9 +39,9 @@ EE_LOG = LOG_DIR / "EE.log"
 # hundred KB, right after login).
 MAX_SCAN_BYTES = 16 * 1024 * 1024
 
-# Host-side prefs (the install dir override). This file lives in OUR
-# folder - game files are never written, ever.
-PREFS_PATH = ROOT / ".wf_local.json"
+# Host-side prefs (the install dir override). This file lives in OUR data
+# root - game files are never written, ever.
+PREFS_PATH = paths.USERDATA / "wf_local.json"
 
 
 # ---- the read-only guarantee ------------------------------------------------

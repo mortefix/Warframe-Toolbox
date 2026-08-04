@@ -134,6 +134,10 @@ check("the rail is measured from the THEME, not off a widget",
 print("\nthe warframe.market status control")
 # Presence is a websocket, so set_state would really dial out. Stand in for it
 # - what is under test is the CONTROL, not core.presence.
+# The control ships disabled until a session exists; enable it explicitly.
+# (Before the WFTOOLBOX_DATA test guard this line was not needed - because
+# the suite was silently reading the developer's REAL session file.)
+w.status.setEnabled(True)
 picked = []
 w.presence.set_state = lambda s: picked.append(s) or setattr(
     w.presence, "_want", s)

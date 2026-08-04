@@ -18,11 +18,10 @@ Security posture:
   * The JWT lives only in the host process; tools get a per-launch gateway
     token instead, valid only against 127.0.0.1 and only while the host runs.
 
-The file lives under the app's own folder by design - the app keeps
-everything it writes self-contained, nothing above its root. The folder's
-ACLs are what protect the token, so a copy of the app on a wide-open data
-drive is only as private as that drive; that is the user's call to make, not
-something the app second-guesses at every launch.
+The file lives in the per-machine data root (core.paths.USERDATA) - never
+inside the app folder, so a copy of the app on a flash drive or in a git
+push can never carry the token. The data folder's ACLs (the user profile's,
+in the default location) are what protect it.
 """
 
 from __future__ import annotations
@@ -35,12 +34,12 @@ from pathlib import Path
 
 import requests
 
+from core import paths
 # Re-exported so the HTTP modules keep importing it from here; the actual
 # string is derived in core.version (one bump updates every surface).
 from core.version import USER_AGENT  # noqa: F401
 
-ROOT = Path(__file__).resolve().parent.parent
-SESSION_PATH = ROOT / ".wfm_session.json"
+SESSION_PATH = paths.USERDATA / "wfm_session.json"
 
 API = "https://api.warframe.market"
 

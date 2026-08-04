@@ -682,7 +682,7 @@ class MainWindow(QWidget):
         out on the next save.
         """
         for name, path, _desc, _size in core_config.user_data_files():
-            if name != ".wfm_session.json":
+            if name != "wfm_session.json":
                 core_config.delete_user_file(path)
         core_config.clear_thumb_cache()
         core_config.clear_wf_data()      # the collected profile/world/item store
@@ -876,7 +876,8 @@ def main(argv: list[str] | None = None) -> int:
     # loads. All three were observed live when another process held the
     # profile. Refusing to start is strictly better than starting broken.
     from PySide6.QtCore import QLockFile
-    lock = QLockFile(str(ROOT / ".wftoolbox.lock"))
+    from core import paths as core_paths
+    lock = QLockFile(str(core_paths.USERDATA / "wftoolbox.lock"))
     lock.setStaleLockTime(0)          # a dead process must not wedge us
     if not lock.tryLock(100):
         from PySide6.QtWidgets import QMessageBox

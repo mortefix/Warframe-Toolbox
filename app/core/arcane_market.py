@@ -16,9 +16,9 @@ import time
 from pathlib import Path
 
 from core import config as wfm_config
+from core import paths
 
-ROOT = Path(__file__).resolve().parent.parent
-PRICE_FILE = ROOT / ".vosfor_prices.json"
+PRICE_FILE = paths.USERDATA / "vosfor_prices.json"
 
 
 def load_prices() -> dict:

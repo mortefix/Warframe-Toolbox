@@ -9,11 +9,19 @@ The offscreen smoke test that drives the real Tk app is NOT here; it needs a
 display and takes ~30s, so it stays a separate manual step.
 """
 
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+
+# Point every spawned test at a throwaway data root: any write a test forgot
+# to monkeypatch lands in a temp dir, never in the real per-machine data.
+# setdefault so an outer runner (CI, a debugging session) can still override.
+os.environ.setdefault("WFTOOLBOX_DATA",
+                      tempfile.mkdtemp(prefix="wftb_test_data_"))
 
 
 def main() -> int:

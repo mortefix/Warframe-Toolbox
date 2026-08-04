@@ -32,8 +32,7 @@ import os
 from pathlib import Path
 
 from . import aes
-
-ROOT = Path(__file__).resolve().parent.parent
+from . import paths
 
 LASTDATA = (Path(os.environ.get("LOCALAPPDATA", "")) / "AlecaFrame"
             / "lastData.dat")
@@ -106,7 +105,7 @@ def _decrypt_lastdata(raw: bytes) -> dict:
 # far too slow for the GUI thread. So Home reads it via ui.work and this caches
 # the number by the file's mtime: the value only changes when the player ranks
 # up and AlecaFrame rewrites its cache, so the decrypt runs at most once per.
-MASTERY_CACHE = ROOT / ".mastery.json"
+MASTERY_CACHE = paths.USERDATA / "mastery.json"
 
 
 def read_mastery() -> int | None:

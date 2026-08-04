@@ -30,10 +30,11 @@ from pathlib import Path
 
 from core import wf_inventory
 from core import config as wfm_config
+from core import paths
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_FILE = ROOT / "vosfor_collections.json"
-OVERRIDE_FILE = ROOT / ".vosfor_owned.json"    # manual check-offs
+DATA_FILE = ROOT / "vosfor_collections.json"   # shipped data - stays in app/
+OVERRIDE_FILE = paths.USERDATA / "vosfor_owned.json"   # manual check-offs
 
 # status of one arcane for the player
 MISSING, OWNED, MAXED = "missing", "owned", "maxed"

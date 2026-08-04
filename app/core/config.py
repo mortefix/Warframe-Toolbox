@@ -1,11 +1,11 @@
 """
 core/config.py - app settings + the registry of user-data files.
 
-Settings live in .wfm_settings.json next to the app. This module also knows
-every file the app generates about the user (session, prefs, watchlist,
-caches) so the Settings > Data > WF Toolbox page can list, open and delete
-them - and it owns the Windows integration bits: the startup registry entry
-and launching Warframe itself.
+Settings live in wfm_settings.json in the per-machine data root
+(core.paths.USERDATA). This module also knows every file the app generates
+about the user (session, prefs, watchlist, caches) so the Settings > Data >
+WF Toolbox page can list, open and delete them - and it owns the Windows
+integration bits: the startup registry entry and launching Warframe itself.
 """
 
 from __future__ import annotations
@@ -17,9 +17,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+from core import paths
+
 ROOT = Path(__file__).resolve().parent.parent
 
-SETTINGS_PATH = ROOT / ".wfm_settings.json"
+SETTINGS_PATH = paths.USERDATA / "wfm_settings.json"
 
 # Standard windowed sizes (smallest sets the app's minimum size).
 WINDOW_SIZES = ["640x480", "800x600", "1024x600", "1024x768", "1280x720",
@@ -86,33 +88,33 @@ def save_settings(settings: dict) -> None:
 
 # ---- user data registry -------------------------------------------------------
 
-CACHE_DIR = ROOT / ".cache"
+CACHE_DIR = paths.USERDATA / "cache"
 THUMB_CACHE = CACHE_DIR / "thumbs"
 
 #: The collected-game-data store (owned by core.store; the path is duplicated
 #: here, like THUMB_CACHE, so the Settings > Data page can size and wipe the
 #: whole store as one group rather than listing every namespace file). Holds the
 #: profile, worldState, Public Export and inventory namespaces.
-WF_DATA_DIR = ROOT / ".wf_data"
+WF_DATA_DIR = paths.USERDATA / "wf_data"
 
 # (filename, what it holds). Only files the app GENERATES about the user -
 # program assets (embedded icons, assets/logo.ico, the code) are not listed
 # and are never touched by the data-deletion actions.
 USER_FILES: list[tuple[str, str]] = [
-    (".wfm_session.json", "warframe.market session token (the account link)"),
-    (".wfm_listings.json", "My Listings prefs: floor/cap offsets + overrides"),
-    (".wfm_watchlist.json", "Market watchlist (bookmarked items)"),
-    (".wf_local.json", "Warframe install path override"),
-    (".vosfor_owned.json", "Vosfor planner: manual arcane check-offs"),
-    (".vosfor_prices.json", "Vosfor planner: cached warframe.market prices"),
-    (".arcane_inv.json", "(legacy) cached arcane inventory — superseded by the "
-                         "collected-data store"),
-    (".wfm_settings.json", "app settings (this Settings screen)"),
+    ("wfm_session.json", "warframe.market session token (the account link)"),
+    ("wfm_listings.json", "My Listings prefs: floor/cap offsets + overrides"),
+    ("wfm_watchlist.json", "Market watchlist (bookmarked items)"),
+    ("wf_local.json", "Warframe install path override"),
+    ("vosfor_owned.json", "Vosfor planner: manual arcane check-offs"),
+    ("vosfor_prices.json", "Vosfor planner: cached warframe.market prices"),
+    ("arcane_inv.json", "(legacy) cached arcane inventory — superseded by the "
+                        "collected-data store"),
+    ("wfm_settings.json", "app settings (this Settings screen)"),
     # These two were missing, so they were invisible on the WF Toolbox page
     # AND survived "Delete ALL user data" - a wipe that leaves data behind is
     # worse than no wipe, because it is believed.
-    (".wfm_contract_watchlist.json", "watched riven / lich contracts"),
-    (".web_bookmarks.json", "saved pages in the embedded web apps"),
+    ("wfm_contract_watchlist.json", "watched riven / lich contracts"),
+    ("web_bookmarks.json", "saved pages in the embedded web apps"),
     ("launch-error.log", "startup crash log (only exists after a crash)"),
 ]
 
@@ -122,7 +124,7 @@ def user_data_files() -> list[tuple[str, Path, str, int]]:
     currently exists on disk."""
     out = []
     for name, desc in USER_FILES:
-        p = ROOT / name
+        p = paths.USERDATA / name
         if p.exists():
             out.append((name, p, desc, p.stat().st_size))
     return out
@@ -224,7 +226,7 @@ def delete_user_file(path: Path) -> bool:
         return False
     if resolved.name not in {n for n, _desc in USER_FILES}:
         return False
-    if resolved.parent != ROOT.resolve():
+    if resolved.parent != paths.USERDATA.resolve():
         return False
     try:
         resolved.unlink(missing_ok=True)
@@ -244,7 +246,7 @@ RUN_NAME = "WarframeToolbox"
 RUN_WATCHER_NAME = "WarframeToolboxWatcher"
 #: The launcher, in the project root. Its FILENAME is baked into the HKCU Run
 #: entries, so renaming it breaks autostart for anyone who enabled it.
-LAUNCHER_PYW = ROOT.parent / "Warframe Toolbox.pyw"
+LAUNCHER_PYW = paths.ROOT / "Warframe Toolbox.pyw"
 
 
 def set_launcher(path) -> None:

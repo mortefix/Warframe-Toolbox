@@ -24,7 +24,11 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent          # the app/ folder
-SETTINGS = ROOT / ".wfm_settings.json"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))               # HKCU Run gives us no cwd
+from core import paths as _paths                # stdlib-only leaf - safe here
+
+SETTINGS = _paths.USERDATA / "wfm_settings.json"
 TOOLBOX = ROOT.parent / "Warframe Toolbox.pyw"  # launcher lives in the root
 APP_TITLE = "Warframe Toolbox"
 POLL_SEC = 15

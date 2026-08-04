@@ -21,9 +21,9 @@ from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 from . import atomic
-from . import session as wfm_session
+from . import paths
 
-BOOKMARKS_PATH = wfm_session.ROOT / ".web_bookmarks.json"
+BOOKMARKS_PATH = paths.USERDATA / "web_bookmarks.json"
 
 
 def normalize(url: str) -> str:

@@ -30,7 +30,7 @@ import json
 import os
 from pathlib import Path
 
-from core import arcane_inv, store
+from core import arcane_inv, paths, store
 
 INVENTORY_NS = "inventory"
 
@@ -55,8 +55,9 @@ class OverwolfCompanionProvider(RawInventoryProvider):
     game-events inventory - so no decrypt; `_inventory_of` still normalizes the
     two shapes AlecaFrame taught us (top-level, or InventoryJson-wrapped)."""
     name = "overwolf-companion"
-    PATH = (Path(os.environ.get("LOCALAPPDATA", "")) / "WarframeToolbox"
-            / "inventory.json")
+    # ALWAYS the platform dir (paths.COMPANION_DIR), never USERDATA: the
+    # companion's manifest bakes this path, so it holds even in portable mode.
+    PATH = paths.COMPANION_DIR / "inventory.json"
 
     def available(self) -> bool:
         return self.PATH.is_file()
