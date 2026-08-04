@@ -45,7 +45,8 @@ template with the token inserted. On any Windows machine it:
 4. **Deps**: `python -m pip install -r app-repo\requirements.txt`.
 5. **Shortcuts**: Desktop + Start Menu "Warframe Toolbox" →
    `pythonw.exe "…\app-repo\Warframe Toolbox.pyw"` (PowerShell-generated
-   `.lnk`, icon = `app\assets\logo.ico`).
+   `.lnk`, icon = `app\assets\logo.ico`), plus a Start Menu
+   "Uninstall Warframe Toolbox" → `app-repo\uninstall.bat`.
 6. Prints a success line and offers to launch.
 
 Re-running the installer on a machine that already has everything is
@@ -54,6 +55,27 @@ harmless: each step is skip-if-present (idempotent).
 Failure handling: each step checks its outcome and stops with a plain-English
 message ("Python install failed — send Daniel this window") rather than
 continuing broken.
+
+## Component 1b — uninstaller: `uninstall.bat` (repo root)
+
+Ships IN the repo (updates with everything else); the installer adds a
+Start Menu "Uninstall Warframe Toolbox" shortcut to it. Token-free and
+generic. Steps:
+
+1. Copy itself to `%TEMP%` and re-exec from there (a batch file cannot
+   delete its own directory).
+2. Stop the Toolbox and watcher if running (match processes whose command
+   line contains the install path).
+3. Remove HKCU Run entries `WarframeToolbox` / `WarframeToolboxWatcher` —
+   only when their commands point inside the install dir (another copy's
+   entries are not ours to delete).
+4. Delete the Desktop + Start Menu shortcuts.
+5. Delete `%LOCALAPPDATA%\Programs\WarframeToolbox` (app-repo + mingit).
+6. **User data is kept by default**: prompt "Also delete your Warframe
+   Toolbox data (session, logins, settings)? [y/N]" — only an explicit `y`
+   removes `%LOCALAPPDATA%\WarframeToolbox`.
+7. Python 3.11 is deliberately left installed (shared per-user runtime);
+   the closing message says so.
 
 ## Component 2 — updater: `app/core/updater.py`
 
