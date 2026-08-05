@@ -14,3 +14,6 @@ launch-error.log
 # Python
 __pycache__/
 *.py[cod]
+
+# Built installer (build artifact — see tools/installer/BUILD.md)
+tools/installer/Install Warframe Toolbox.exe

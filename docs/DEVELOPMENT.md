@@ -46,48 +46,52 @@ Overwolf companion's `manifest.json` versions independently.
 
 ## Releasing to the beta tester
 
-The beta channel is the git repo itself (private, no collaborator needed):
-the tester runs an **installer** that embeds a read-only token, and the app
-**updates itself at launch** (`core/updater.py`; toggle in Settings >
-Display, default on).
+The beta channel is the **public** git repo: the tester runs an Inno Setup
+`.exe` installer, and the app **updates itself at launch** (`core/updater.py`;
+toggle in Settings > Display, default on).
 
-One-time, Daniel's side:
+Build the installer (one-time: `winget install JRSoftware.InnoSetup`):
 
-1. Mint the token: GitHub → Settings → Developer settings → Personal access
-   tokens → **Fine-grained tokens** → Generate. Repository access: only
-   `Warframe-Toolbox`. Permissions: **Contents: Read-only**. Expiration:
-   **No expiration**. (Revoking this token on GitHub is the kill switch for
-   every installer built from it.)
-2. `python tools/installer/make_installer.py <token>` → produces
-   `Install Warframe Toolbox.bat`. Send that file over Discord.
+    iscc "tools\installer\installer.iss"   ->  tools\installer\Install Warframe Toolbox.exe
 
-The tester double-clicks it. The installer (no admin rights needed)
-installs python.org Python 3.11 per-user if missing, uses the machine's git
-or drops a portable MinGit beside the app, clones to
-`%LOCALAPPDATA%\Programs\WarframeToolbox\app-repo`, installs deps, and
-creates Desktop/Start Menu shortcuts (plus an "Uninstall Warframe Toolbox"
-entry → the shipped `uninstall.bat`, which always keeps their data unless
-they explicitly say otherwise).
+Send `Install Warframe Toolbox.exe` over Discord. No token, no GitHub account,
+and no per-tester build - the repo is public, so the installer clones
+anonymously and one `.exe` works for everyone. Full note:
+`tools/installer/BUILD.md`.
+
+The tester double-clicks it (a one-time SmartScreen "More info -> Run anyway",
+since it is unsigned). With no admin rights it accepts the GPL license,
+installs python.org Python 3.11 per-user if missing, uses the machine's git or
+drops a portable MinGit beside the app, clones to
+`%LOCALAPPDATA%\Programs\WarframeToolbox\app-repo`, installs deps, and creates
+the chosen Desktop/Start Menu shortcuts. It **closes a running copy first**, so
+reinstalling over a running app is safe. Uninstall is via "Add or remove
+programs" (or the Start Menu entry) and **asks before deleting user data**.
 
 Ship a release: merge to `main`, push. Their app pulls it on next launch;
 new deps are pip-installed automatically when `requirements.txt` changed.
 Their data lives in their own `%LOCALAPPDATA%\WarframeToolbox` - a pull can
-never touch it, and no JWT can enter git because the data root is outside
-the repo entirely.
+never touch it.
 
 `update.bat` remains as the manual fallback path (pull-then-launch) - e.g.
 when the toggle is off or a launch-time pull failed.
 
-## Packaging (.exe) - next chapter, notes so far
+## Packaging
 
-- PyInstaller **onedir** (not onefile) is the plan; entry point = the
-  launcher.
+The shipping installer is an **Inno Setup bootstrapper**
+(`tools/installer/installer.iss`) that installs Python and clones the app - see
+"Releasing to the beta tester" above and `tools/installer/BUILD.md`. The app
+still runs as `.pyw` under python.org `pythonw.exe`.
+
+A fully **frozen** build (no Python needed on the tester's machine) is the
+next chapter, not yet started:
+
+- PyInstaller **onedir** (not onefile); entry point = the launcher.
 - `config.set_launcher(...)` already exists precisely so a frozen .exe can
   register ITSELF in the HKCU Run entries instead of the .pyw.
 - A frozen build embeds python.org Python, which also retires the
   Store-Python data-virtualization caveat.
-- Updates then shift from git-pull to release zips - `update.bat` stops being
-  the entry point for packaged users.
+- Updates then shift from git-pull to release zips.
 
 ## Things that bite (project-specific)
 

@@ -422,10 +422,12 @@ behind it. (If a startup error ever occurs before the window opens, it's
 written to `launch-error.log` in the data home and shown in a dialog, since
 there's no console to print to.) The app **keeps itself up to date**: at
 launch it quietly pulls the newest version from its git remote (toggle in
-Settings > Display); beta testers install via the generated installer (see
-`docs/DEVELOPMENT.md`), and `update.bat` remains as a manual fallback.
+Settings > Display); beta testers install via the `.exe` installer built from
+`tools/installer/installer.iss` (see `docs/DEVELOPMENT.md`), and `update.bat`
+remains as a manual fallback.
 
-An `.exe` build (PyInstaller onedir) is planned; see `docs/DEVELOPMENT.md`.
+A fully frozen `.exe` build (PyInstaller onedir, no Python needed) is planned;
+see `docs/DEVELOPMENT.md`.
 
 ## Getting started
 
