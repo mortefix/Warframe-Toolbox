@@ -21,8 +21,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont, QFontDatabase, QFontMetrics
+from PySide6.QtCore import QEvent, Qt, QTimer
+from PySide6.QtGui import QFont, QFontDatabase, QFontMetrics, QIcon
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton,
                                QStackedWidget, QVBoxLayout, QWidget)
 
@@ -232,6 +232,11 @@ class MainWindow(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(APP_TITLE)     # the watcher looks for this title
+        # The WINDOW icon: what alt-tab (and an unpinned taskbar button)
+        # shows. The caption's copy is stripped in _hide_caption_icon() -
+        # the crest already lives in the app's own header, and a second
+        # logo stacked above it in the corner reads as a mistake.
+        self.setWindowIcon(QIcon(str(ROOT / "assets" / "logo.ico")))
         self.setAttribute(Qt.WA_StyledBackground, True)
         # Geometry is applied by show_configured(), not here - the saved
         # settings have not been loaded yet at this point in __init__.
@@ -513,6 +518,60 @@ class MainWindow(QWidget):
             self.resize(min(want_w, avail.width() - 40),
                         min(want_h, avail.height() - 40))
         self.show()
+
+    def event(self, ev):  # noqa: N802 (Qt override)
+        # The caption-icon blank must survive native-handle RECREATION:
+        # embedding the first QtWebEngine view tears down and rebuilds this
+        # top level's hwnd (measured 2026-08-05 - a tweak applied at +200ms
+        # was on a dead handle by the +400ms web warmup). Qt announces every
+        # handle change with WinIdChange; re-apply on the NEW handle, deferred
+        # a tick so the recreated window finishes its native setup first.
+        if ev.type() == QEvent.WinIdChange:
+            QTimer.singleShot(0, self._hide_caption_icon)
+        return super().event(ev)
+
+    def _hide_caption_icon(self) -> None:
+        """Blank the icon in the native title bar (Windows only).
+
+        The window icon must exist for alt-tab (that reads ICON_BIG), but
+        the caption would draw a second copy of the crest right above the
+        header's own. Windows 11's DWM caption ignores the classic
+        WS_EX_DLGMODALFRAME trick (measured 2026-08-05) and falls back down
+        the chain ICON_SMALL -> ICON_BIG -> class icon, drawing SOMETHING no
+        matter what gets nulled - so the working move is to hand it a fully
+        TRANSPARENT ICON_SMALL: the caption draws nothing, alt-tab keeps the
+        crest from ICON_BIG."""
+        from PySide6.QtGui import QGuiApplication
+        if QGuiApplication.platformName() != "windows":
+            return                        # offscreen tests, future Linux
+        import ctypes
+        user32 = ctypes.windll.user32
+        gdi32 = ctypes.windll.gdi32
+        # 64-bit safety: handles are pointers; without explicit types ctypes
+        # truncates them to 32-bit ints.
+        gdi32.CreateBitmap.restype = ctypes.c_void_p
+        user32.CreateIconIndirect.restype = ctypes.c_void_p
+        user32.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint,
+                                        ctypes.c_void_p, ctypes.c_void_p]
+
+        if getattr(self, "_blank_hicon", None) is None:
+            class _ICONINFO(ctypes.Structure):
+                _fields_ = [("fIcon", ctypes.c_int),
+                            ("xHotspot", ctypes.c_uint),
+                            ("yHotspot", ctypes.c_uint),
+                            ("hbmMask", ctypes.c_void_p),
+                            ("hbmColor", ctypes.c_void_p)]
+            # AND mask all ones (leave screen), 32bpp colour all zero
+            # (alpha 0) -> an icon that draws nothing at all.
+            mask = gdi32.CreateBitmap(16, 16, 1, 1, b"\xff" * 64)
+            color = gdi32.CreateBitmap(16, 16, 1, 32, b"\x00" * (16 * 16 * 4))
+            info = _ICONINFO(1, 0, 0, mask, color)
+            # kept for the process lifetime on purpose - the caption holds it
+            self._blank_hicon = user32.CreateIconIndirect(ctypes.byref(info))
+        if self._blank_hicon:
+            WM_SETICON, ICON_SMALL = 0x0080, 0
+            user32.SendMessageW(int(self.winId()), WM_SETICON, ICON_SMALL,
+                                self._blank_hicon)
 
     # -- tray ---------------------------------------------------------------
 
