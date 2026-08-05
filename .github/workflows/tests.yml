@@ -1,0 +1,22 @@
+# Runs the full suite on every push/PR. The Qt tests run offscreen and the
+# runner exports WFTOOLBOX_DATA to a temp dir itself, so no extra setup is
+# needed. If the QtWebEngine tests prove flaky on hosted runners, document
+# the divergence in docs/DEVELOPMENT.md rather than blocking on it.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python tests/run_all.py
