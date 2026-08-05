@@ -8,6 +8,8 @@ The current version always lives in `app/core/version.py`.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-05
+
 ### Added
 - Windows installer (`Install Warframe Toolbox.exe`): installs per-user with no
   admin, sets up Python and the app, and keeps it updated automatically.
