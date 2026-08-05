@@ -15,5 +15,15 @@ launch-error.log
 __pycache__/
 *.py[cod]
 
-# Built installer (build artifact — see tools/installer/BUILD.md)
-tools/installer/Install Warframe Toolbox.exe
+# Dev-only — kept on the `dev-tools` branch, excluded from the lean `main`.
+# These still exist on disk; they're just not tracked on the runtime branch.
+# (Installer source, build docs, tests, CI, dev docs, AI planning artifacts,
+# screenshot helpers, legacy batch helpers.)
+/tools/
+/tests/
+/docs/*
+!/docs/default-settings.json
+/.github/
+/CLAUDE.md
+/uninstall.bat
+/update.bat
