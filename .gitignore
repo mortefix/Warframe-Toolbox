@@ -21,7 +21,8 @@ __pycache__/
 # screenshot helpers, legacy batch helpers.)
 /tools/
 /tests/
-/docs/
+/docs/*
+!/docs/default-settings.json
 /.github/
 /CLAUDE.md
 /uninstall.bat

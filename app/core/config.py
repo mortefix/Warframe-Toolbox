@@ -27,15 +27,20 @@ SETTINGS_PATH = paths.USERDATA / "wfm_settings.json"
 WINDOW_SIZES = ["640x480", "800x600", "1024x600", "1024x768", "1280x720",
                 "1366x768", "1440x900", "1536x864", "1920x1080", "2560x1440"]
 
+# DEFAULTS is the single source of truth for a new user's settings.
+# `docs/default-settings.json` is a human-readable MIRROR of this dict, kept in
+# sync for easy review — when you add or change a key here, update that file too
+# (the per-user blank fields wf_account_id / wf_platform / vosfor_balance stay
+# empty in the mirror on purpose).
 DEFAULTS = {
-    "fullscreen": False,           # maximize on launch
+    "fullscreen": True,            # maximize on launch
     "window_size": "1280x720",     # windowed size
     "monitor": 1,                  # which display to open on (1-based)
     "start_with_windows": False,   # HKCU Run entry for the Toolbox
     "launch_with_warframe": False, # watcher: open the Toolbox when the GAME starts
     "dev_panels": False,           # show the Settings > DevTools section
     "minimize_to_tray": False,     # minimize hides to the notification area
-    "close_to_tray": True,         # closing the window hides to the tray instead
+    "close_to_tray": False,        # closing the window hides to the tray instead
                                    # of quitting - a background helper stays ready
                                    # beside the game (Quit from the tray to exit)
     "check_updates": True,         # launch-time git self-update (core.updater)
@@ -46,7 +51,7 @@ DEFAULTS = {
     # pasted in Settings; empty until then, and the app falls back to AlecaFrame
     # for mastery rank while it is empty. NOT the warframe.market id.
     "wf_account_id": "",           # 24-hex DE ObjectId
-    "wf_platform": "pc",           # pc/ps4/xb1/swi/mob/and
+    "wf_platform": "",             # pc/ps4/xb1/swi/mob/and (empty until connected)
     "vosfor_balance": 0,           # Vosfor planner: your current balance
     # which acquisition methods the planner weighs (farm/market discount
     # arcanes you can easily get another way)
@@ -55,9 +60,9 @@ DEFAULTS = {
     # {user} = the other tenno, {item} = item name, {price} = posted price.
     # The '/w {user} ' prefix makes the paste a whisper in-game.
     "msg_buy": ("/w {user} Hello. I would like to purchase {item} for "
-                "{price}p. (warframe.market)"),
+                "{price}p. (Warframe Toolbox)"),
     "msg_sell": ("/w {user} Hello. I have {item} available for {price}p. "
-                 "(warframe.market)"),
+                 "(Warframe Toolbox)"),
 }
 
 

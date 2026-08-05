@@ -1,0 +1,19 @@
+{
+  "fullscreen": true,
+  "window_size": "1280x720",
+  "monitor": 1,
+  "start_with_windows": false,
+  "launch_with_warframe": false,
+  "dev_panels": false,
+  "minimize_to_tray": false,
+  "close_to_tray": false,
+  "check_updates": true,
+  "adblock": true,
+  "theme": "Orokin Dark",
+  "wf_account_id": "",
+  "wf_platform": "",
+  "vosfor_balance": 0,
+  "vosfor_methods": { "vosfor": true, "farm": false, "market": false },
+  "msg_buy": "/w {user} Hello. I would like to purchase {item} for {price}p. (Warframe Toolbox)",
+  "msg_sell": "/w {user} Hello. I have {item} available for {price}p. (Warframe Toolbox)"
+}
