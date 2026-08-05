@@ -39,9 +39,9 @@ Pick an app from the sidebar. Nothing loads until you open it.
   spend where, and can weight the plan by how easily each arcane is farmed or
   how cheap it is to just buy on the market. It reads which arcanes you own
   from AlecaFrame (or you tick them off by hand).
-- **WF Live · Wiki · Overframe** — three sites embedded right in the app (world
-  state, the wiki, and Overframe), with a built-in **ad blocker** on by default.
-  Item names throughout the app link straight into the Wiki tab.
+- **Wiki · Overframe** — the Warframe Wiki and Overframe.gg embedded right in
+  the app, with a built-in **ad blocker** on by default. Item names throughout
+  the app link straight into the Wiki tab.
 
 ## Your account & data — what's collected and why
 
@@ -60,7 +60,9 @@ where it goes:
 - **AlecaFrame inventory** *(optional, for Vosfor)* — the app reads your arcane
   inventory **read-only** from AlecaFrame's local cache to know what you own.
   Nothing is ever written back to AlecaFrame or to the game, and every
-  game-file access the app makes is strictly read-only.
+  game-file access the app makes is strictly read-only. This is a temporary
+  bridge — the long-term plan is a dedicated Warframe Toolbox companion app on
+  Overwolf that supplies your inventory directly.
 
 **Where it lives.** The app itself carries no personal data — everything it
 generates about you sits in `%LOCALAPPDATA%\WarframeToolbox` on your machine:
@@ -97,6 +99,16 @@ pip install -r requirements.txt
 ```
 
 and double-click **`Warframe Toolbox.pyw`**.
+
+## A note on AlecaFrame
+
+Warframe Toolbox is built to complement AlecaFrame, not replace it. While
+AlecaFrame provides fantastic, reliable tools, its market browser is fairly
+minimal. Warframe Toolbox focuses on filling that gap by offering a more
+in-depth warframe.market experience. Ultimately, my goal was simply to build the
+utilities I felt were still missing from the game, and to bring community
+resources like the Warframe Wiki and Overframe.gg together in one convenient
+place. Have fun!
 
 ## License
 
