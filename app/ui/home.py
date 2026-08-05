@@ -237,12 +237,17 @@ class HomeView(QWidget):
         fl = QVBoxLayout(frame)
         fl.setContentsMargins(t.SP_SCREEN, t.SP_XL, t.SP_SCREEN, t.SP_XL)
         fl.setSpacing(t.SP_XL)
-        fl.addWidget(label("Warframe Toolbox", role="h1"))
-        fl.addWidget(self._status_box(status))
-        # launch self-update outcome - one quiet line, hidden until set
+        # title row: the app name with the self-update outcome trailing to its
+        # right - one quiet line, hidden until set_update_note fills it
+        title_row = QHBoxLayout()
+        title_row.setSpacing(t.SP_LG)
+        title_row.addWidget(label("Warframe Toolbox", role="h1"))
         self._update_note = label("", role="muted")
         self._update_note.setVisible(False)
-        fl.addWidget(self._update_note)
+        title_row.addWidget(self._update_note, 0, Qt.AlignVCenter)
+        title_row.addStretch(1)
+        fl.addLayout(title_row)
+        fl.addWidget(self._status_box(status))
         fl.addWidget(label("Available Tools", role="h1"))
         self._tools_container = self._tools_box()
         fl.addWidget(self._tools_container)

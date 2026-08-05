@@ -1082,9 +1082,6 @@ _APP_VERSION = core_version.__version__
 #: Developer identity. Name and the GitHub link share ONE line, spaced apart.
 _DEV_NAME = "Mortefix"
 _DEV_GITHUB = "https://github.com/mortefix/Warframe-Toolbox"
-_APP_TAGLINE = ("An independent, non-commercial fan project. Warframe is "
-                "© Digital Extremes Ltd. Warframe Toolbox is not affiliated "
-                "with, endorsed by, or sponsored by Digital Extremes.")
 
 #: A readable digest of every bundled licence. The CANONICAL, per-file registry
 #: is app/assets/licenses/README.md (with the full OFL/Apache text beside it) -
@@ -1166,9 +1163,6 @@ class AboutPage(QWidget):
                                             if pending else ""), role=""))
         row.addStretch(1)
         dev.addLayout(row)
-        tag = label(_APP_TAGLINE, role="small")
-        tag.setWordWrap(True)
-        dev.addWidget(tag)
 
         # -- Changelog and Licensing: each scrolls INSIDE its own card, so the
         #    page never scrolls. Equal stretch => equal container height. --
