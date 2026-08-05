@@ -16,6 +16,9 @@ The current version always lives in `app/core/version.py`.
 - New-user default settings: the app launches maximized, the window's close
   button quits instead of hiding to the tray, and the trade-whisper templates
   are signed `(Warframe Toolbox)`.
+- About page: the Changelog panel now populates live from the project changelog,
+  the Licensing panel states the GPLv3 + Overwolf linking exception, and
+  Developer Info links the GitHub repository.
 
 ## [1.0.0]
 

@@ -359,12 +359,8 @@ class DisplayPage(Page):
         self.check(sysbox, "Minimize to system tray on window close",
                    "close_to_tray")
         self.check(sysbox, "Check for updates at launch", "check_updates")
-        self.note(sysbox, "At startup the Toolbox quietly pulls its newest "
-                          "version; changes apply on the next launch.")
         self.check(sysbox, "Enable Developer Panels", "dev_panels",
                    self._toggle_dev_panels)
-        self.note(sysbox, "Shows the DevTools section (read-only inspectors "
-                          "for the collected game data).")
         self.body.addStretch(1)
 
     def _toggle_dev_panels(self, enabled: bool) -> None:
@@ -1083,17 +1079,12 @@ class ToolboxPage(Page):
 #: The version string lives in core.version; this is just the local alias.
 _APP_VERSION = core_version.__version__
 
-#: Developer identity. Name and the Discord invite share ONE line, spaced apart.
-_DEV_NAME = "Dzwsin"
-_DEV_DISCORD = "https://discord.gg/6KvjAk2K"
+#: Developer identity. Name and the GitHub link share ONE line, spaced apart.
+_DEV_NAME = "Mortefix"
+_DEV_GITHUB = "https://github.com/mortefix/Warframe-Toolbox"
 _APP_TAGLINE = ("An independent, non-commercial fan project. Warframe is "
                 "© Digital Extremes Ltd. Warframe Toolbox is not affiliated "
                 "with, endorsed by, or sponsored by Digital Extremes.")
-
-#: Release notes. One entry per release; there are none yet, so this is the
-#: pre-1.0 placeholder the user asked for. Newest-first once real releases land.
-_CHANGELOG = (f"v{_APP_VERSION}\n"
-              "This app is under development.")
 
 #: A readable digest of every bundled licence. The CANONICAL, per-file registry
 #: is app/assets/licenses/README.md (with the full OFL/Apache text beside it) -
@@ -1101,6 +1092,10 @@ _CHANGELOG = (f"v{_APP_VERSION}\n"
 _LICENSING = (
     "Warframe Toolbox — © the Warframe Toolbox authors. An independent, "
     "non-commercial fan project; Warframe is © Digital Extremes Ltd.\n\n"
+    "Licensed under the GNU General Public License v3, with a special "
+    "exception permitting linking against — and distribution through — the "
+    "proprietary Overwolf platform, SDK, and APIs. The full licence and the "
+    "exception text ship in LICENSE at the project root.\n\n"
     "Built with PySide6 (Qt for Python) — LGPL v3.\n\n"
     "Icons — Material Symbols\n"
     "  Apache License 2.0 · © Google LLC\n\n"
@@ -1152,23 +1147,23 @@ class AboutPage(QWidget):
         row.setSpacing(t.SP_SM)
         row.addWidget(label("Developer:", role="muted"))
         row.addWidget(label(_DEV_NAME, role=""))
-        row.addSpacing(t.SP_XL)
-        row.addWidget(label("Version:", role="muted"))
+        row.addSpacing(t.SP_XL)      # gap before the GitHub pair
+        row.addWidget(label("GitHub:", role="muted"))
+        # a real clickable link (opens the system browser, not the web tab),
+        # coloured with the accent token and still selectable to copy
+        link = label(f'<a href="{_DEV_GITHUB}" style="color: {t.ACCENT};">'
+                     f'{_DEV_GITHUB}</a>', role="")
+        link.setOpenExternalLinks(True)
+        link.setTextInteractionFlags(Qt.LinksAccessibleByMouse
+                                     | Qt.TextSelectableByMouse)
+        row.addWidget(link)
+        row.addSpacing(t.SP_XL)      # gap before the version
+        row.addWidget(label("App Version:", role="muted"))
         # a freshly self-updated copy shows what is waiting for the restart
         pending = core_updater.pending_version()
         row.addWidget(label(_APP_VERSION + (f"  ({pending} installed — "
                                             f"restart to apply)"
                                             if pending else ""), role=""))
-        row.addSpacing(t.SP_XL)      # reasonable gap before the Discord pair
-        row.addWidget(label("Discord:", role="muted"))
-        # a real clickable invite (opens the system browser, not the web tab),
-        # coloured with the accent token and still selectable to copy
-        link = label(f'<a href="{_DEV_DISCORD}" style="color: {t.ACCENT};">'
-                     f'{_DEV_DISCORD}</a>', role="")
-        link.setOpenExternalLinks(True)
-        link.setTextInteractionFlags(Qt.LinksAccessibleByMouse
-                                     | Qt.TextSelectableByMouse)
-        row.addWidget(link)
         row.addStretch(1)
         dev.addLayout(row)
         tag = label(_APP_TAGLINE, role="small")
@@ -1177,7 +1172,7 @@ class AboutPage(QWidget):
 
         # -- Changelog and Licensing: each scrolls INSIDE its own card, so the
         #    page never scrolls. Equal stretch => equal container height. --
-        self._scroll_section("Changelog", _CHANGELOG, 1)
+        self._scroll_section("Changelog", core_version.changelog_text(), 1)
         self._scroll_section("Licensing", _LICENSING, 1)
 
     def _section(self, title: str) -> QVBoxLayout:
