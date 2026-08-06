@@ -8,6 +8,10 @@ The current version always lives in `app/core/version.py`.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-08-06
+
+
+
 ## [1.0.1] - 2026-08-05
 
 ### Added
