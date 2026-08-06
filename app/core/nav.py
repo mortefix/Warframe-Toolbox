@@ -56,6 +56,8 @@ def sidebar_sections(tools: Iterable = ()) -> list[NavSection]:
     ))
     toolbox = NavSection("Toolbox", (
         NavItem("vosfor", "Vosfor", "vosfor", False),
+        # R&D test app (mods helper groundwork) - throwaway registration
+        NavItem("mods", "Mods", "inventory", False),
         *(NavItem(t.id, t.name, t.icon, t.requires_session)
           for t in tools if t.id not in HIDDEN_FROM_SIDEBAR),
     ))

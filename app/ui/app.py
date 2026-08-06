@@ -449,6 +449,9 @@ class MainWindow(QWidget):
             return VosforView(self.settings, self.open_wiki,
                               lambda: core_config.save_settings(self.settings),
                               self.market_any)
+        if key == "mods":
+            from ui.mods import ModsView
+            return ModsView(self.open_wiki, self.open_overframe)
         tool = next((x for x in TOOLS if x.id == key), None)
         if tool is not None:
             from ui.runner import RunnerView
@@ -702,6 +705,14 @@ class MainWindow(QWidget):
         if hasattr(page, "open_url") and self._pending_wiki:
             page.open_url(url)
             self._pending_wiki = None
+
+    def open_overframe(self, url: str) -> None:
+        """Deep-link the embedded Overframe TAB (build guides for a mod) -
+        same never-an-external-browser rule as open_wiki."""
+        self.navigate("web_builds")
+        page = self.stack.widget(self._pages["web_builds"])
+        if hasattr(page, "open_url"):
+            page.open_url(url)
 
     # -- account and data ---------------------------------------------------
 

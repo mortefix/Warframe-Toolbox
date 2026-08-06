@@ -640,6 +640,23 @@ class WebAppView(QWidget):
             # first paint can strand a black surface the same way tab-return
             # can - give it the same one-shot self-heal
             QTimer.singleShot(450, self._nudge)
+        if ok:
+            # Load-time stuck-black heal, discovered empirically by the user:
+            # SCROLLING un-sticks a page that loaded behind solid black. So
+            # every finished load gets an invisible scroll - one pixel down,
+            # back up on the next animation frame. The page processes two
+            # real scroll events ~16ms apart; the viewport never visibly
+            # moves. Runs for hidden (preloading) tabs too - healing before
+            # the first look is the point.
+            QTimer.singleShot(80, self._scroll_nudge)
+
+    def _scroll_nudge(self) -> None:
+        """The imperceptible 1px down/up scroll (see _load_finished)."""
+        if not self._loaded:
+            return
+        self.view.page().runJavaScript(
+            "window.scrollBy(0, 1);"
+            "requestAnimationFrame(() => window.scrollBy(0, -1));")
 
     def _paint_nav(self, *_args) -> None:
         """`*_args` so this can be connected straight to `urlChanged`, which
