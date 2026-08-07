@@ -12,7 +12,7 @@ independently - it ships through Overwolf's store on its own cadence.
 from pathlib import Path
 
 APP_NAME = "WarframeToolbox"
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 USER_AGENT = f"{APP_NAME}/{__version__} (by Mortefix)"
 
