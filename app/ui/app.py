@@ -449,9 +449,10 @@ class MainWindow(QWidget):
             return VosforView(self.settings, self.open_wiki,
                               lambda: core_config.save_settings(self.settings),
                               self.market_any)
-        if key == "mods":
-            from ui.mods import ModsView
-            return ModsView(self.open_wiki, self.open_overframe)
+        if key == "mods_shade":
+            from ui.mods_shade import ModsTreasuryView
+            return ModsTreasuryView(self.open_wiki, self.market_any,
+                                    self.open_market)
         tool = next((x for x in TOOLS if x.id == key), None)
         if tool is not None:
             from ui.runner import RunnerView
@@ -713,6 +714,34 @@ class MainWindow(QWidget):
         page = self.stack.widget(self._pages["web_builds"])
         if hasattr(page, "open_url"):
             page.open_url(url)
+
+    def open_market(self, name: str) -> None:
+        """Deep-link the Market app to an item by display name.
+
+        Slug resolution runs off-thread first: item_names() may fetch the
+        whole item index on first use, which must not block the GUI. The
+        navigate happens in the callback (on_done runs on the GUI thread)."""
+        from ui import work
+        client = self.market_any()
+
+        def find():
+            want = name.strip().lower()
+            return next((s for n, s, _ in client.item_names()
+                         if n.lower() == want), None)
+
+        def done(slug):
+            self.navigate("market")
+            page = self.stack.widget(self._pages["market"])
+            if not hasattr(page, "select"):
+                return
+            page.select("market")
+            tab = page.tabs["market"]
+            if slug:
+                tab.open(slug, name)
+            else:
+                tab.search.setText(name)    # not traded: leave the search set
+
+        self._market_link_job = work.run(find, done)
 
     # -- account and data ---------------------------------------------------
 

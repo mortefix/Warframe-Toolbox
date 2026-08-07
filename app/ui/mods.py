@@ -225,10 +225,11 @@ class ModsView(QWidget):
         self._cards_job = work.run(mods_db.counts, self._cards_done)
 
     def _cards_done(self, c: dict) -> None:
-        owned, total = c["owned"], c["total_known"]
-        self._set_card("owned", f"{owned} / {total} distinct mods\n"
-                                f"{c['copies']} copies · {c['ranked']} ranked "
-                                f"instances")
+        self._set_card("owned",
+                       f"{c['obtainable_owned']} / {c['obtainable_total']} "
+                       f"obtainable today  +{c['extras_owned']} retired\n"
+                       f"{c['copies']} copies · {c['ranked']} ranked "
+                       f"instances")
         self._set_card("progress", f"{c['unranked_owned']} owned but unranked"
                                    f"\n{c['not_maxed']} not at max rank")
         self._set_card("lost", f"{c['lost']} previously owned, now missing")

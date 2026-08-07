@@ -57,7 +57,8 @@ _PAGES = [("Display", [("window", "Window")]),
           ("DevTools", [("dev_worldstate", "WorldState"),
                         ("dev_profile", "Profile"),
                         ("dev_eelog", "EE.log"),
-                        ("dev_inventory", "Inventory")])]
+                        ("dev_inventory", "Inventory"),
+                        ("dev_mods", "Mods DB")])]
 
 TREE = sorted(((section, sorted(pages, key=lambda kv: kv[1].lower()))
                for section, pages in _PAGES),
@@ -1215,8 +1216,21 @@ def _dev_pages() -> dict:
     from ui.dev_inventory import InventoryDevView
     from ui.dev_profile import ProfileDevView
     from ui.dev_worldstate import WorldStateDevView
+    from ui.mods import ModsView
+
+    class ModsDevView(ModsView):
+        """The R&D mods-database explorer, retired from the sidebar when the
+        player-facing Mods app shipped; lives on here as a dev panel."""
+
+        def __init__(self, view) -> None:
+            # getattr: test shells are minimal fakes without the link hooks
+            super().__init__(
+                getattr(view.shell, "open_wiki", None) or (lambda name: None),
+                getattr(view.shell, "open_overframe", None))
+
     return {"dev_worldstate": WorldStateDevView, "dev_profile": ProfileDevView,
-            "dev_eelog": EELogDevView, "dev_inventory": InventoryDevView}
+            "dev_eelog": EELogDevView, "dev_inventory": InventoryDevView,
+            "dev_mods": ModsDevView}
 
 
 PAGES = {"window": DisplayPage, "warframe": WarframePage,

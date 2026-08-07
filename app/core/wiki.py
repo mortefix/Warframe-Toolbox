@@ -118,7 +118,15 @@ def url_for(name: str) -> str:
 
     Spaces become underscores the way MediaWiki titles do; everything else
     is percent-encoded, so apostrophes and parentheses survive.
+
+    Idempotent on already-formed wiki URLs: mods.db stores each mod's
+    wiki_url pre-built from the wiki entry's Link (which is not always the
+    display name, e.g. Flawed Chilling Grasp -> "Chilling Grasp"), so the
+    mods view hands a URL here, not a title. Only BASE-prefixed URLs pass
+    through - this is not a general open-any-URL door.
     """
+    if name.startswith(BASE):
+        return name
     title = normalize(name)
     if not title:
         return ""

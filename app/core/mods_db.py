@@ -140,10 +140,33 @@ def mods_from_inv(inv: dict, known: set[str] | None = None) -> dict[str, dict]:
     return out
 
 
+def prune_known_unknowns() -> int:
+    """Drop unknown_mods rows that mods.db has since learned (a DB upgrade
+    can teach it a path - the Striker/BoomStick errata). Without this the
+    row lingers forever: the unknown counter overstates and the obtainable
+    metric's extras double-count the mod. Returns rows dropped."""
+    if not PLAYER_DB.is_file():
+        return 0
+    known = [r["internal"] for r in _known_internals()]
+    con = _player_conn()
+    try:
+        dropped = 0
+        for i in range(0, len(known), 500):
+            chunk = known[i:i + 500]
+            dropped += con.execute(
+                "DELETE FROM unknown_mods WHERE item_type IN (%s)"
+                % ",".join("?" * len(chunk)), chunk).rowcount
+        con.commit()
+        return dropped
+    finally:
+        con.close()
+
+
 def sync_owned(force: bool = False) -> dict:
     """Diff the live inventory into the player DB. Loss is only ever inferred
     from a SUCCESSFUL read - provider absence changes nothing. Returns a
     small status dict for the UI."""
+    prune_known_unknowns()      # DB-vs-DB; needs no inventory read
     provider = wf_inventory.active_provider()
     if provider is None:
         return {"synced": False, "reason": "no inventory source"}
@@ -248,9 +271,21 @@ def query_mods(q: str = "", set_key: str = "", compat: str = "",
                polarity: str = "", rarity: str = "", hide_owned: bool = False,
                sort: str = "name", limit: int = 300) -> tuple[list[dict], int]:
     """(rows, total_matches). Overlap-aware set filter via set_members;
-    owned columns joined from the player DB."""
+    owned columns joined from the player DB.
+
+    Ownership is resolved per canon GROUP, not per exact path (the owner
+    ruling: DE data twins merge - see build_index.py and _OWNED_CANON).
+    The inventory holds whichever twin path DE ships; both rows must show
+    that ownership, or the canonical twin renders as unowned."""
     where, params = [], []
-    joins = ["LEFT JOIN player.owned o ON o.mod = m.internal"]
+    joins = [
+        "LEFT JOIN canon_map cm ON cm.mod = m.internal",
+        "LEFT JOIN (SELECT c.canon AS canon, MAX(o.owned) AS owned, "
+        "MAX(o.current_rank) AS current_rank, SUM(o.copies) AS copies, "
+        "MAX(o.lost_at) AS lost_at FROM player.owned o "
+        "JOIN canon_map c ON c.mod = o.mod GROUP BY c.canon) o "
+        "ON o.canon = cm.canon",
+    ]
     if set_key:
         joins.append("JOIN set_members sm ON sm.mod = m.internal "
                      "AND sm.set_key = ?")
@@ -290,6 +325,12 @@ _COVERAGE_SETS = ("corrupted", "primed", "galvanized", "arbitration",
 _OWNED_CANON = ("EXISTS (SELECT 1 FROM canon_map c JOIN player.owned o "
                 "ON o.mod = c.mod WHERE c.canon = m.internal AND o.owned = 1)")
 
+#: obtainable in game TODAY (owner ruling 2026-08-07): not archived, not a
+#: legacy fusion core, no curated unobtainable_reason. The single source for
+#: the headline "x / total obtainable +N retired" stat.
+_OBTAINABLE = ("m.archived = 0 AND m.legacy = 0 "
+               "AND m.unobtainable_reason IS NULL")
+
 
 def counts() -> dict:
     """Completion metrics per the owner's rulings: variants merge into their
@@ -323,6 +364,21 @@ def counts() -> dict:
                 "IS NOT NULL AND o.current_rank < m.max_rank "
                 "AND m.charge_based=0 AND m.archived=0"),
             "unknown": one("SELECT COUNT(*) FROM player.unknown_mods"),
+            # the headline stat: completion over what the game still offers,
+            # plus the retired extras the player holds anyway. Unknown paths
+            # count as extras: everything mods.db knows IS in mods.db, so an
+            # unknown is either a retired ghost (Volt ability cards) or a
+            # brand-new mod awaiting a DB regen - visible via "unknown".
+            "obtainable_total": one(
+                "SELECT COUNT(*) FROM mods m WHERE m.variant_of IS NULL "
+                f"AND {_OBTAINABLE}"),
+            "obtainable_owned": one(
+                "SELECT COUNT(*) FROM mods m WHERE m.variant_of IS NULL "
+                f"AND {_OBTAINABLE} AND {_OWNED_CANON}"),
+            "extras_owned": one(
+                "SELECT COUNT(*) FROM mods m WHERE m.variant_of IS NULL "
+                f"AND NOT ({_OBTAINABLE}) AND {_OWNED_CANON}")
+                + one("SELECT COUNT(*) FROM player.unknown_mods"),
         }
         cov = {}
         syn_keys = [r["key"] for r in con.execute(

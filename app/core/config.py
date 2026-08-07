@@ -96,6 +96,7 @@ def save_settings(settings: dict) -> None:
 
 CACHE_DIR = paths.USERDATA / "cache"
 THUMB_CACHE = CACHE_DIR / "thumbs"
+MOD_IMG_CACHE = CACHE_DIR / "mod_images"   # wiki mod-card art (core.mod_images)
 
 #: The collected-game-data store (owned by core.store; the path is duplicated
 #: here, like THUMB_CACHE, so the Settings > Data page can size and wipe the
@@ -137,13 +138,15 @@ def user_data_files() -> list[tuple[str, Path, str, int]]:
 
 
 def thumb_cache_size() -> tuple[int, int]:
-    """(file count, total bytes) of the downloaded-image cache."""
+    """(file count, total bytes) of the downloaded-image caches (market
+    thumbnails + wiki mod-card art) - sized and wiped as one group."""
     n = total = 0
-    if THUMB_CACHE.is_dir():
-        for f in THUMB_CACHE.iterdir():
-            if f.is_file():
-                n += 1
-                total += f.stat().st_size
+    for d in (THUMB_CACHE, MOD_IMG_CACHE):
+        if d.is_dir():
+            for f in d.iterdir():
+                if f.is_file():
+                    n += 1
+                    total += f.stat().st_size
     return n, total
 
 def wf_data_size() -> tuple[int, int]:
@@ -193,8 +196,10 @@ def clear_thumb_cache() -> int:
     embedded in core/assets.py and assets/, not in the cache). Returns the
     number of files removed."""
     n = 0
-    if THUMB_CACHE.is_dir():
-        for f in THUMB_CACHE.iterdir():
+    for d in (THUMB_CACHE, MOD_IMG_CACHE):
+        if not d.is_dir():
+            continue
+        for f in d.iterdir():
             if f.is_file():
                 try:
                     f.unlink()
