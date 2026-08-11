@@ -1,3 +1,6 @@
+### Notice:
+this aplication is in beta and not yet complete. there are currently issues with account linking for Warframe.Market I discovered on Monday August 10th, 2026. this will be patched soon and I will add an on boarding wizard before pushing the next release. feel free to download this app and take a look at it. Account linking is functional for your Warframe account (this function is owned by Digital Extremes and your account credentials cannot be seen by me), Local game data, and reading AlecaFrame's data. both Warframe Toolbox and AlecaFrame must be running in the background and you must complete at least one mission in game for this data to be captured by Warframe Toolbox.
+
 # Warframe Toolbox
 
 A desktop companion for **warframe.market** traders. Link your account once and
