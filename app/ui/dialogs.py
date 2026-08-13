@@ -10,9 +10,9 @@ than ever seeing that either.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (QButtonGroup, QDialog, QHBoxLayout, QLineEdit,
-                               QPushButton, QRadioButton, QVBoxLayout)
+                               QPushButton, QRadioButton, QVBoxLayout, QWidget)
 
 from core import session as core_session
 from core import theme as t
@@ -22,32 +22,18 @@ from ui.widgets import hairline, label
 PLATFORMS = ("pc", "xbox", "ps4", "switch")
 
 
-class LoginDialog(QDialog):
-    """Link a warframe.market account.
+class LoginForm(QWidget):
+    """The warframe.market sign-in form, shared by LoginDialog and the
+    setup wizard. Emits linked(Session) on success; failures stay inline."""
 
-    The sign-in call is a network round trip, so it runs on a worker and the
-    dialog stays responsive - a modal that freezes while it waits reads as a
-    crash, and warframe.market is slow often enough to matter.
-    """
+    linked = Signal(object)          # Session
 
-    def __init__(self, parent) -> None:
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.session = None
         self._job = None
-        self.setWindowTitle("Link warframe.market account")
-        self.setModal(True)
-        self.setMinimumWidth(t.DIALOG_MIN_W)
-
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(t.SP_XL, t.SP_XL, t.SP_XL, t.SP_XL)
+        lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(t.SP_MD)
-        lay.addWidget(label("Link your warframe.market account", role="h2"))
-        blurb = label("Credentials are sent only to api.warframe.market. Your "
-                      "password is never saved — only the session token is "
-                      "kept.", role="muted")
-        blurb.setWordWrap(True)
-        lay.addWidget(blurb)
-        lay.addWidget(hairline())
 
         prev = core_session.load()
 
@@ -73,18 +59,12 @@ class LoginDialog(QDialog):
         row.addStretch(1)
         lay.addLayout(row)
 
-        # The token is stored app-locally by design (everything the app writes
-        # lives under its own folder), so the old "outside your user profile"
-        # warning was removed - it flagged a deliberate choice as a problem.
         self.status = label("", role="small")
         self.status.setWordWrap(True)
         lay.addWidget(self.status)
 
         buttons = QHBoxLayout()
         buttons.addStretch(1)
-        cancel = QPushButton("Cancel")
-        cancel.clicked.connect(self.reject)
-        buttons.addWidget(cancel)
         self.ok = QPushButton("Sign in")
         self.ok.setProperty("kind", "money")
         self.ok.setDefault(True)
@@ -125,5 +105,44 @@ class LoginDialog(QDialog):
         self._say(message, "err")
 
     def _ok(self, session) -> None:
+        self.ok.setEnabled(True)
+        self.ok.setText("Sign in")
+        self.linked.emit(session)
+
+
+class LoginDialog(QDialog):
+    """Link a warframe.market account. A thin modal wrapper around
+    LoginForm: heading + blurb + Cancel, closing Accepted on success."""
+
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+        self.session = None
+        self.setWindowTitle("Link warframe.market account")
+        self.setModal(True)
+        self.setMinimumWidth(t.DIALOG_MIN_W)
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(t.SP_XL, t.SP_XL, t.SP_XL, t.SP_XL)
+        lay.setSpacing(t.SP_MD)
+        lay.addWidget(label("Link your warframe.market account", role="h2"))
+        blurb = label("Credentials are sent only to api.warframe.market. "
+                      "Your password is never saved — only the session "
+                      "token is kept.", role="muted")
+        blurb.setWordWrap(True)
+        lay.addWidget(blurb)
+        lay.addWidget(hairline())
+
+        self.form = LoginForm(self)
+        self.form.linked.connect(self._linked)
+        lay.addWidget(self.form)
+
+        row = QHBoxLayout()
+        row.addStretch(1)
+        cancel = QPushButton("Cancel")
+        cancel.clicked.connect(self.reject)
+        row.addWidget(cancel)
+        lay.addLayout(row)
+
+    def _linked(self, session) -> None:
         self.session = session
         self.accept()

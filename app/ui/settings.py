@@ -548,6 +548,8 @@ class WarframePage(Page):
         btns = QHBoxLayout()
         btns.addWidget(self.button("Connect Warframe.com…", self._connect_wf))
         btns.addWidget(self.button("Get ID manually", self._open_user_data))
+        btns.addWidget(self.button("Run setup wizard…",
+                                   self.view.run_setup_wizard))
         btns.addStretch(1)
         box.addLayout(btns)
         self.account_note = self.note(box)
@@ -591,13 +593,16 @@ class WarframePage(Page):
 
     def _connect_wf(self) -> None:
         """Auto-capture the account id via an embedded warframe.com login. Falls
-        back to the manual route if the web engine can't be brought up."""
+        back to the manual route if the web engine can't be brought up (either
+        the import fails, or ConnectWarframeDialog raises because it built but
+        QtWebEngine could not be started)."""
         try:
             from ui.wf_connect import ConnectWarframeDialog
+            dlg = ConnectWarframeDialog(self, self._captured_account)
         except Exception:                                   # noqa: BLE001
             self._open_user_data()
             return
-        ConnectWarframeDialog(self, self._captured_account).exec()
+        dlg.exec()
 
     def _captured_account(self, account_id: str) -> None:
         """Called by the capture dialog with a validated id: fill the field and
@@ -813,6 +818,8 @@ class MarketPage(Page):
         rail = QHBoxLayout()
         rail.addWidget(self.button("Refresh counts", self._counts,
                                    icon="refresh"))
+        rail.addWidget(self.button("Run setup wizard…",
+                                   self.view.run_setup_wizard))
         rail.addStretch(1)
         self.unlink = self.button("Unlink account", self._unlink,
                                   danger=True)
@@ -1568,3 +1575,8 @@ class SettingsView(QWidget):
 
     def wipe_everything(self) -> None:
         self.shell.wipe_user_data()
+
+    def run_setup_wizard(self) -> None:
+        # getattr: test FakeShells predate the wizard (same pattern as the
+        # DevTools adapter's fallbacks)
+        getattr(self.shell, "run_setup_wizard", lambda: None)()

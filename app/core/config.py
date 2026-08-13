@@ -44,6 +44,7 @@ DEFAULTS = {
                                    # of quitting - a background helper stays ready
                                    # beside the game (Quit from the tray to exit)
     "check_updates": True,         # launch-time git self-update (core.updater)
+    "welcomed": False,             # first-launch setup wizard has been shown
     "adblock": True,               # block ads/trackers in the web apps
     "theme": "Orokin Dark",        # colour palette: "Orokin Dark" / "Orokin Light"
     # Digital Extremes account identity for the public profile API

@@ -8,6 +8,11 @@ The current version always lives in `app/core/version.py`.
 
 ## [Unreleased]
 
+### Added
+- First-launch setup wizard: welcome, Warframe.com profile connect,
+  warframe.market sign-in, and an AlecaFrame data check — every step
+  skippable, re-runnable from Settings > Data (Warframe or Market).
+
 ## [1.1.1] - 2026-08-07
 
 ### Added

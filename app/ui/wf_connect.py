@@ -20,14 +20,11 @@ from __future__ import annotations
 
 from typing import Callable
 
-from PySide6.QtCore import QTimer, QUrl
-from PySide6.QtWebEngineCore import QWebEnginePage
-from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtCore import QTimer, QUrl, Signal
 from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QPushButton,
-                               QVBoxLayout)
+                               QVBoxLayout, QWidget)
 
 from core import wf_profile
-from ui import web as ui_web
 
 LOGIN_URL = "https://www.warframe.com/login"
 
@@ -52,14 +49,86 @@ _PROBE_JS = """
 _POLL_MS = 1500
 
 
+class WarframeCaptureWidget(QWidget):
+    """The embedded warframe.com login + account-id capture, shared by
+    ConnectWarframeDialog and the setup wizard. Nothing web-related is
+    created until start(), so constructing (and importing) this widget
+    needs no QtWebEngine."""
+
+    captured = Signal(str)
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._done = False
+        self.view = None
+        self._lay = QVBoxLayout(self)
+        self._lay.setContentsMargins(0, 0, 0, 0)
+        self._timer = QTimer(self)
+        self._timer.setInterval(_POLL_MS)
+        self._timer.timeout.connect(self._probe)
+
+    def start(self) -> bool:
+        """Bring up the embedded browser. False when QtWebEngine is
+        unavailable - the caller shows its fallback copy instead."""
+        if self.view is not None:
+            if not self._done:
+                self._timer.start()
+            return True
+        try:
+            from PySide6.QtWebEngineCore import QWebEnginePage
+            from PySide6.QtWebEngineWidgets import QWebEngineView
+            from ui import web as ui_web
+        except Exception:                                   # noqa: BLE001
+            return False
+        self.view = QWebEngineView(self)
+        self.view.setPage(QWebEnginePage(ui_web.profile(), self.view))
+        self._lay.addWidget(self.view, 1)
+        self.view.load(QUrl(LOGIN_URL))
+        self._timer.start()
+        return True
+
+    def stop(self) -> None:
+        self._timer.stop()
+
+    def _probe(self) -> None:
+        if self._done or self.view is None:
+            return
+        page = self.view.page()
+        if page is not None:
+            page.runJavaScript(_PROBE_JS, self._got)
+
+    def _got(self, result) -> None:
+        if self._done or not isinstance(result, str):
+            return
+        if result == "__WAIT__":
+            return                     # fetch in flight; look next tick
+        aid = (wf_profile.extract_account_id(result)
+               if result not in ("__ERR__", "") else None)
+        if aid:
+            self._done = True
+            self._timer.stop()
+            self.captured.emit(aid)
+            return
+        # No id this cycle: re-arm the fetch so the next tick tries again,
+        # catching AJAX logins with no navigation.
+        if self.view is None:
+            return
+        page = self.view.page()
+        if page is not None:
+            page.runJavaScript("window.__wfCap = undefined;")
+
+
 class ConnectWarframeDialog(QDialog):
-    """Modal capture window. Calls `on_captured(account_id)` once, then closes."""
+    """Modal capture window. Calls `on_captured(account_id)` once, closes.
+
+    Raises RuntimeError if QtWebEngine is unavailable (WarframeCaptureWidget
+    itself never raises - only this caller-facing wrapper does, so
+    ui.settings._connect_wf's try/except can fall back to the manual
+    copy-paste flow instead of showing a permanently blank capture area)."""
 
     def __init__(self, parent, on_captured: Callable[[str], None]) -> None:
         super().__init__(parent)
         self._on_captured = on_captured
-        self._done = False
-
         self.setWindowTitle("Connect Warframe.com")
         self.resize(780, 760)
         lay = QVBoxLayout(self)
@@ -71,11 +140,9 @@ class ConnectWarframeDialog(QDialog):
         self.status.setWordWrap(True)
         lay.addWidget(self.status)
 
-        self.view = QWebEngineView(self)
-        # A page bound to the SHARED profile, so the session cookie lives in the
-        # same jar as the rest of the app (and a prior login is reused).
-        self.view.setPage(QWebEnginePage(ui_web.profile(), self.view))
-        lay.addWidget(self.view, 1)
+        self.capture = WarframeCaptureWidget(self)
+        self.capture.captured.connect(self._captured)
+        lay.addWidget(self.capture, 1)
 
         row = QHBoxLayout()
         row.addStretch(1)
@@ -84,40 +151,14 @@ class ConnectWarframeDialog(QDialog):
         row.addWidget(self.cancel_btn)
         lay.addLayout(row)
 
-        self.view.load(QUrl(LOGIN_URL))
+        if not self.capture.start():
+            raise RuntimeError("QtWebEngine unavailable")
 
-        self._timer = QTimer(self)
-        self._timer.setInterval(_POLL_MS)
-        self._timer.timeout.connect(self._probe)
-        self._timer.start()
-
-    def _probe(self) -> None:
-        if self._done:
-            return
-        page = self.view.page()
-        if page is not None:
-            page.runJavaScript(_PROBE_JS, self._got)
-
-    def _got(self, result) -> None:
-        if self._done or not isinstance(result, str):
-            return
-        if result == "__WAIT__":
-            return                              # fetch in flight; look next tick
-        aid = (wf_profile.extract_account_id(result)
-               if result not in ("__ERR__", "") else None)
-        if aid:
-            self._done = True
-            self._timer.stop()
-            self.status.setText("Account ID captured — you're connected.")
-            self._on_captured(aid)
-            self.accept()
-            return
-        # No id this cycle (not signed in yet, or a redirect to HTML): re-arm the
-        # fetch so the next tick tries again, catching AJAX logins with no nav.
-        page = self.view.page()
-        if page is not None:
-            page.runJavaScript("window.__wfCap = undefined;")
+    def _captured(self, aid: str) -> None:
+        self.status.setText("Account ID captured — you're connected.")
+        self._on_captured(aid)
+        self.accept()
 
     def reject(self) -> None:
-        self._timer.stop()
+        self.capture.stop()
         super().reject()

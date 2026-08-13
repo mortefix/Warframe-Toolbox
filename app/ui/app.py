@@ -889,6 +889,30 @@ class MainWindow(QWidget):
         self._drop_pages("listings", "market", "settings", "home")
         self.navigate("home")
 
+    def run_setup_wizard(self) -> None:
+        """The first-launch setup wizard, also runnable from Settings.
+        Closing it by ANY path marks the app welcomed - the wizard must
+        never nag twice."""
+        from ui.wizard import WelcomeWizard
+        dialog = WelcomeWizard(self,
+                               get_session=self._current_session,
+                               adopt_session=self.adopt_session,
+                               set_account_id=self._store_account_id)
+        dialog.exec()
+        dialog.deleteLater()
+        if not self.settings.get("welcomed"):
+            self.settings["welcomed"] = True
+            core_config.save_settings(self.settings)
+
+    def _current_session(self):
+        return self.session
+
+    def _store_account_id(self, aid: str) -> None:
+        """Same write path as Settings > Data > Warframe: the shared
+        settings dict plus one save, so the page and disk never drift."""
+        self.settings["wf_account_id"] = aid
+        core_config.save_settings(self.settings)
+
     def navigate(self, key: str) -> None:
         """Show a screen, building it on first visit and keeping it after.
 
@@ -1019,6 +1043,10 @@ def main(argv: list[str] | None = None) -> int:
     app.setStyleSheet(qss.build(set(QFontDatabase.families())))
     win = MainWindow()
     win.show_configured()
+    # First launch: the setup wizard, deferred a beat so the window paints
+    # first. `welcomed` flips true when the wizard closes by any path.
+    if not win.settings.get("welcomed"):
+        QTimer.singleShot(600, win.run_setup_wizard)
     # Warm the web engine and pre-fetch the web tabs a beat after the window is
     # up, so the first switch to Wiki/Overframe shows a ready page. Deferred so
     # the home screen paints first and launch still feels instant.

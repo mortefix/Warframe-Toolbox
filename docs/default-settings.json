@@ -8,6 +8,7 @@
   "minimize_to_tray": false,
   "close_to_tray": false,
   "check_updates": true,
+  "welcomed": false,
   "adblock": true,
   "theme": "Orokin Dark",
   "wf_account_id": "",
