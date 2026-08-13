@@ -8,6 +8,8 @@ The current version always lives in `app/core/version.py`.
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-08-13
+
 ### Added
 - First-launch setup wizard: welcome, Warframe.com profile connect,
   warframe.market sign-in, and an AlecaFrame data check — every step
