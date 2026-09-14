@@ -8,6 +8,8 @@ The current version always lives in `app/core/version.py`.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-13
+
 ### Added
 - Listings: a fourth "Saved For Later" tab. The new park button on every
   WTS/WTB card (top right, beside the wiki button) hides the listing on
