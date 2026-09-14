@@ -30,13 +30,14 @@ file turns one into a colour.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QFontDatabase, QFontMetrics
+from PySide6.QtCore import QEvent, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QFontDatabase, QFontMetrics, QPainter
 from PySide6.QtWidgets import (QCheckBox, QDialog, QFrame, QGridLayout,
                                QHBoxLayout, QLabel, QLineEdit, QMessageBox,
                                QPushButton, QScrollArea, QSizePolicy,
                                QStackedWidget, QVBoxLayout, QWidget)
 
+from core import archive as core_archive
 from core import floors as core_floors
 from core import listings_vm as vm
 from core import market as core_market
@@ -61,7 +62,7 @@ OFFSET_FIELD_W = 46
 BADGE = {"sell": (t.WFM_BADGE_BG, t.WFM_BADGE_FG),
          "buy": (t.WFM_BUY_BG, t.WFM_BUY_FG)}
 TAB_ACCENTS = {"WTS": t.WFM_BADGE_FG, "WTB": t.WFM_BUY_FG,
-               "Contracts": t.ACCENT}
+               "Saved For Later": t.WFM_GREEN, "Contracts": t.ACCENT}
 
 
 def _flat_style(colour: str) -> str:
@@ -112,6 +113,46 @@ def _placeholder_icon(mark: str = "◍") -> QLabel:
     return icon
 
 
+class TabDot(QWidget):
+    """The Saved For Later alert: a small red circle pinned to its tab
+    button's top-right corner.
+
+    A child widget rather than QSS because `ListingsView.select()` rewrites
+    each tab button's stylesheet WHOLESALE on every switch - any style-based
+    mark would be clobbered on the first click. Painted rather than a "●"
+    glyph for StatusDot's reason: free sizing with no hand-written type
+    size, which the style guide forbids in ui/."""
+
+    D = 8                                # diameter, px
+
+    def __init__(self, parent: QPushButton) -> None:
+        super().__init__(parent)
+        self.setFixedSize(self.D, self.D)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        parent.installEventFilter(self)  # re-pin on every button resize
+        self.hide()
+
+    def eventFilter(self, obj, event) -> bool:
+        if obj is self.parent() and event.type() == QEvent.Resize:
+            self._place()
+        return False
+
+    def _place(self) -> None:
+        self.move(self.parent().width() - self.D - t.SP_SM, t.SP_SM)
+
+    def set_on(self, on: bool) -> None:
+        if on:
+            self._place()
+        self.setVisible(on)
+
+    def paintEvent(self, _event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing, True)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(t.WFM_RED))
+        p.drawEllipse(0, 0, self.D, self.D)
+
+
 class ListingCard(QFrame):
     """One order. Created once per `order_id` and kept until that order goes.
 
@@ -127,20 +168,35 @@ class ListingCard(QFrame):
     remove = Signal(str)
     reprice = Signal(str)
     wiki = Signal(str)
+    # named to keep clear of `self.market`, the live-price label
+    market_open = Signal(str)
     limit_typed = Signal(str)
+    archive = Signal(str)
+    unarchive = Signal(str)
+    target_typed = Signal(str)
+    limit_blur = Signal(str)
 
-    def __init__(self, listing: core_market.Listing, spec: vm.SideSpec) -> None:
+    def __init__(self, listing: core_market.Listing, spec: vm.SideSpec,
+                archived: bool = False) -> None:
         super().__init__()
         self.listing = listing
         self.spec = spec
         self.oid = listing.order_id
+        self.archived = archived
         # `market_low is None` is ambiguous on its own - it means both "not
         # fetched yet" and "nobody else is listing this". The sweep sets this
         # when it lands, which is what tells the two apart.
         self.market_known = False
         self.market_failed = False       # last sweep for this card errored
+        self.market_error = ""           # the API's own reason, for the tooltip
         self.setProperty("surface", "listing")
         self.setAttribute(Qt.WA_StyledBackground, True)
+        # ClickFocus, not the tab-order-joining kinds: a click on the card's
+        # background (or the tab body between cards, see ListingsTab/SavedTab)
+        # must still move focus OFF the limit field so its blur-revert
+        # contract fires. None of these join Tab order - they exist only to
+        # complete a click-away.
+        self.setFocusPolicy(Qt.ClickFocus)
 
         grid = QGridLayout(self)
         card_grid(grid)
@@ -185,6 +241,28 @@ class ListingCard(QFrame):
         self.wiki_btn.clicked.connect(lambda: self.wiki.emit(listing.name))
         # sized to match the +/-1 buttons in showEvent (below), not here
         title.addWidget(self.wiki_btn, 0, Qt.AlignTop)
+        # park / bring back - the Saved For Later shortcut, right beside the
+        # wiki jump. One button, two meanings: in a side tab it ARCHIVES
+        # (hide on warframe.market + move to Saved For Later); in the Saved
+        # tab it returns the listing to its origin side - locally only,
+        # still hidden, so a mistake costs nothing. WFM_TEAL on purpose: it
+        # wears the same teal as the other stock actions (+/-1, Edit).
+        self.park_btn = QPushButton(
+            glyph_icon("unarchive" if archived else "archive",
+                       color=t.WFM_TEAL), "")
+        self.park_btn.setStyleSheet(_flat_style(t.WFM_TEAL))
+        self.park_btn.setCursor(Qt.PointingHandCursor)
+        if archived:
+            self.park_btn.setToolTip("return to its WTS/WTB tab "
+                                     "(stays hidden on warframe.market)")
+            self.park_btn.clicked.connect(
+                lambda: self.unarchive.emit(self.oid))
+        else:
+            self.park_btn.setToolTip("save for later - hides this listing "
+                                     "and parks it in Saved For Later")
+            self.park_btn.clicked.connect(
+                lambda: self.archive.emit(self.oid))
+        title.addWidget(self.park_btn, 0, Qt.AlignTop)
         grid.addLayout(title, 0, 1)
 
         # -- price / quantity / market line
@@ -206,7 +284,7 @@ class ListingCard(QFrame):
         self.price = label("", role="price")
         info.addWidget(self.price, 0, mid)
         info.addWidget(plat_label(), 0, mid)
-        info.addWidget(label("each", role="small"), 0, mid)
+        info.addWidget(label("Each", role="small"), 0, mid)
         info.addWidget(self._dot(), 0, mid)
         self.market = label(f"{spec.best_word.capitalize()} …", role="small")
         self.market.setToolTip("best live price from another trader")
@@ -233,6 +311,7 @@ class ListingCard(QFrame):
                      icon="edit")
         edit.clicked.connect(lambda: self.edit.emit(self.oid))
         acts.addWidget(edit)
+        self.edit_btn = edit
         self.up = _flat("1", t.WFM_TEAL, "one more in stock",
                         icon="add_one")
         self.up.clicked.connect(lambda: self.adjust.emit(self.oid, 1))
@@ -248,30 +327,110 @@ class ListingCard(QFrame):
         # sized to match the +/-1 buttons in showEvent (below)
         self.vis.clicked.connect(lambda: self.visibility.emit(self.oid))
         acts.addWidget(self.vis)
+        if archived:
+            # a parked listing can be edited and restocked in place; it is
+            # not sold or re-shown from here - both of those require it to
+            # come BACK first. Hidden, not skipped: the showEvent sizing
+            # cascade still reads self.up.sizeHint().
+            for w in (done, self.vis):
+                w.hide()
         grid.addLayout(acts, 2, 1)
 
         # -- limit row
         bot = QHBoxLayout()
         bot.setSpacing(t.SP_SM)
-        bot.addWidget(label(spec.limit_short, role="small"))
+        self.limit_label = label("Target Price:" if archived
+                                 else spec.limit_short, role="small")
+        bot.addWidget(self.limit_label)
+        # the field and its check share ONE bordered frame so the pair reads
+        # as a single control, not a field with a stray button beside it.
+        # Margins equal the border width on every side, so neither child ever
+        # sits under the frame's own edge.
+        self.limit_box = QFrame()
+        self.limit_box.setAttribute(Qt.WA_StyledBackground, True)
+        self.limit_box.setStyleSheet(
+            f"background: {t.FIELD_BG_IN};"
+            f" border: {t.CTRL_BORDER_W}px solid {t.FIELD_EDGE};")
+        box_lay = QHBoxLayout(self.limit_box)
+        box_lay.setSpacing(t.SP_SM)
+        box_lay.setContentsMargins(t.CTRL_BORDER_W, t.CTRL_BORDER_W,
+                                    t.CTRL_BORDER_W + t.SP_SM, t.CTRL_BORDER_W)
         self.limit = QLineEdit()
         self.limit.setFixedWidth(LIMIT_FIELD_W)
         self.limit.setAlignment(Qt.AlignCenter)
-        self.limit.setToolTip(
-            f"the repricer never goes past this - blank follows the tab "
-            f"{spec.limit_word} automatically")
+        # the frame already carries the field's chrome - the field itself
+        # draws no border or fill of its own
+        self.limit.setStyleSheet("border: none; background: transparent;"
+                                 " padding: 0px;")
+        # Esc = abandon the edit, caught via eventFilter below (QLineEdit has
+        # no keyPressEvent override point from here without subclassing it).
+        self.limit.installEventFilter(self)
+        if archived:
+            self.limit.setToolTip("when the market reaches this price the "
+                                  "tab lights up - blank means no watch")
+        else:
+            self.limit.setToolTip(
+                f"the repricer never goes past this - blank follows the tab "
+                f"{spec.limit_word} automatically")
+        commit = (self.target_typed if archived else self.limit_typed)
+
+        def _commit() -> None:
+            """Routes both the check-click and Enter through one path, so
+            the Enter-gate applies to both: a clean field (nothing typed
+            since the last commit/repaint) makes Enter a no-op exactly like
+            clicking the disabled check would be."""
+            if not self.limit_ok.isEnabled():
+                return
+            self._confirm_state(False)
+            commit.emit(self.oid)
+        self.limit.returnPressed.connect(_commit)
+        # fires after Enter too - by then the store already holds the new
+        # value, so the "revert" repaint just confirms it
         self.limit.editingFinished.connect(
-            lambda: self.limit_typed.emit(self.oid))
-        bot.addWidget(self.limit)
+            lambda: self.limit_blur.emit(self.oid))
+        # textEdited fires only on a USER edit, never on a programmatic
+        # setText - exactly the distinction "has the user typed since the
+        # last commit/repaint" needs.
+        self.limit.textEdited.connect(lambda _t: self._confirm_state(True))
+        box_lay.addWidget(self.limit)
+        # the explicit commit for the value field: Enter or the check
+        # applies; clicking away reverts. NoFocus is load-bearing - a
+        # focusable button would steal focus on press, fire the revert
+        # (editingFinished) first, and commit the just-reverted text. It is
+        # now an embedded flat glyph (no box of its own) - its colour alone
+        # carries the pending-change state, set by _confirm_state below.
+        self.limit_ok = QPushButton("")
+        self.limit_ok.setCursor(Qt.PointingHandCursor)
+        self.limit_ok.setFocusPolicy(Qt.NoFocus)
+        self.limit_ok.setToolTip("apply this value (Enter works too)")
+        self.limit_ok.clicked.connect(_commit)
+        box_lay.addWidget(self.limit_ok, 0, Qt.AlignVCenter)
+        bot.addWidget(self.limit_box)
+        self._confirm_state(False)      # clean by default
         gem = QLabel()
         gem.setPixmap(plat_icon())
         gem.setStyleSheet("background: transparent;")
         bot.addWidget(gem)
-        self.limit_mode = label("auto", role="small")
+        self.limit_mode = label("Auto", role="small")
         self.limit_mode.setToolTip("auto follows the tab offset; set is yours")
         bot.addWidget(self.limit_mode)
         self.result = label("", role="small")
+        # the label must never drive the card's width: a long result (a full
+        # warframe.market refusal, say) once grew this column and pushed every
+        # card's buttons out of the grid. Ignored = take the leftover space,
+        # clip the rest; set_result carries the whole text in the tooltip.
+        self.result.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         bot.addWidget(self.result, 1)
+        # the Market shortcut wears the wiki button's muted look: both are
+        # "go look this item up" jumps, not money actions
+        self.market_btn = QPushButton(glyph_icon("market", color=t.WFM_MUTED),
+                                      "")
+        self.market_btn.setStyleSheet(_flat_style(t.WFM_MUTED))
+        self.market_btn.setCursor(Qt.PointingHandCursor)
+        self.market_btn.setToolTip(f"open {listing.name} in the Market app")
+        self.market_btn.clicked.connect(
+            lambda: self.market_open.emit(self.oid))
+        bot.addWidget(self.market_btn)
         rp = QPushButton(" Reprice")
         rp.setIcon(glyph_icon("reprice", color=t.INK))
         rp.setProperty("kind", "money")
@@ -289,6 +448,9 @@ class ListingCard(QFrame):
         rm.setToolTip("delete this order")
         rm.clicked.connect(lambda: self.remove.emit(self.oid))
         bot.addWidget(rm)
+        if archived:
+            self.limit_mode.hide()       # auto/set is a floors concept
+            rp.hide()                    # the repricer never touches parked
         # Height is TAKEN FROM the neighbour rather than guessed. The two sit
         # side by side, so a hardcoded size is a number that has to be kept in
         # sync with a style sheet by hand - and was already out of step.
@@ -297,35 +459,74 @@ class ListingCard(QFrame):
 
         self.set_hit(False)
 
+    def eventFilter(self, obj, event):
+        if (obj is self.limit and event.type() == QEvent.KeyPress
+                and event.key() == Qt.Key_Escape):
+            # Esc = abandon the edit: dropping focus fires editingFinished,
+            # whose blur path repaints the stored value and grays the check
+            self.limit.clearFocus()
+            return True
+        return super().eventFilter(obj, event)
+
     def showEvent(self, event) -> None:
         super().showEvent(event)
         # The card's buttons as a CSS-style cascade, sized from tokens:
         #   base  -> CONTROL_H: the shared height EVERY button inherits
-        #   icon  -> CONTROL_H + SP_MD wide (visibility = wiki = trash: one class)
+        #   icon  -> CONTROL_H + SP_MD wide (eye = wiki = market = park =
+        #            trash: one class, five buttons)
         #   step  -> `wide`, the +/-1 natural width (also badge + limit). Kept
         #            DERIVED, not tokenized: it drifts a pixel between DPI scales
         #            (46 at 1x, 47 at 2x/3x), so a fixed value would shift it.
         #   money -> Reprice inherits the height and OVERRIDES its width (spans
         #            the +1 and -1 above it) - a size reused nowhere else.
+        #   check -> the limit's ✓ is a square CONTROL_H glyph embedded in
+        #            the field's own frame (limit_box), which wraps the pair
+        #            and is given a fixed height only - its width follows the
+        #            layout, so the frame always hugs field + check exactly.
         # sizeHint is only meaningful once the style sheet has been applied.
         rp, rm = self._match_heights
         H = t.CONTROL_H
         wide = self.up.sizeHint().width()
-        icon_w = t.CONTROL_H + t.SP_MD           # eye = wiki = trash width (32)
-        for b in (self.vis, self.wiki_btn, rm):
+        icon_w = t.CONTROL_H + t.SP_MD   # eye = wiki = market = park = trash width
+        for b in (self.vis, self.wiki_btn, self.market_btn, self.park_btn, rm):
             b.setFixedSize(icon_w, H)
         rp.setFixedSize(2 * wide + t.SP_SM, H)
         self.badge.setFixedSize(wide, H)
         self.limit.setFixedSize(wide, H)
+        # the check sits INSIDE the composite: a square inset by SP_SM so
+        # its border never touches the frame's, vertically centred by the
+        # layout
+        side = H - 2 * t.SP_SM
+        # slightly wider than tall: SP_SM total = ~2px each side of the glyph
+        self.limit_ok.setFixedSize(side + t.SP_SM, side)
+        # glyph clipping check: if the check mark clips in the smaller button,
+        # constrain the icon to fit
+        self.limit_ok.setIconSize(QSize(side - 2 * t.CTRL_BORDER_W - 2,
+                                        side - 2 * t.CTRL_BORDER_W - 2))
+        self.limit_box.setFixedHeight(H + 2 * t.CTRL_BORDER_W)
 
     def _dot(self) -> QLabel:
         w = label("·", role="small")
         w.setStyleSheet(f"color: {t.WFM_EDGE};")
         return w
 
+    def _confirm_state(self, dirty: bool) -> None:
+        """The check carries the pending-change state: gray and dead when
+        the field matches the store, lit (the wiki button's WFM_MUTED - the
+        lit check should read available, not shout like the eye toggle) the
+        moment the user types, gray again once the value is applied or
+        reverted. The border follows the glyph so the whole button reads one
+        state."""
+        colour = t.WFM_MUTED if dirty else t.BORDER
+        self.limit_ok.setEnabled(dirty)
+        self.limit_ok.setIcon(glyph_icon("confirm", color=colour))
+        self.limit_ok.setStyleSheet(
+            f"QPushButton {{ background: transparent;"
+            f" border: {t.CTRL_BORDER_W}px solid {colour}; }}")
+
     # -- painting ------------------------------------------------------------
 
-    def paint(self, limits: core_floors.Limits) -> None:
+    def paint(self, limits: core_floors.Limits | None) -> None:
         """Repaint everything derived from the model. Idempotent by design:
         any worker can call it at any time without tracking what changed."""
         l = self.listing
@@ -350,18 +551,28 @@ class ListingCard(QFrame):
         self.paint_limit(limits)
         self.paint_market()
 
-    def paint_limit(self, limits: core_floors.Limits) -> None:
+    def paint_limit(self, limits: core_floors.Limits | None) -> None:
         """The limit field and its auto/set tag. Never touched while the user
         is typing in it - a background repaint that overwrote a half-typed
         number would be maddening and is easy to cause."""
+        if self.archived:
+            return          # the field is the TARGET - paint_target owns it
         if not self.limit.hasFocus():
             self.limit.setText(str(limits.limit(
                 vm.limit_key(self.listing), self.oid,
                 self.listing.platinum)))
+            self._confirm_state(False)   # field == store again: nothing pending
         overridden = limits.is_overridden(vm.limit_key(self.listing))
-        self.limit_mode.setText("set" if overridden else "auto")
+        self.limit_mode.setText("Set" if overridden else "Auto")
         self.limit_mode.setStyleSheet(
             f"color: {t.WFM_PINK if overridden else t.WFM_MUTED};")
+
+    def paint_target(self, target: int | None) -> None:
+        """The Saved tab's target field. Same rule as paint_limit: never
+        overwrite a field the user is typing in."""
+        if not self.limit.hasFocus():
+            self.limit.setText("" if target is None else str(target))
+            self._confirm_state(False)   # field == store again: nothing pending
 
     def paint_market(self) -> None:
         """The live-market readout. `better_than` is the same rule that
@@ -371,16 +582,21 @@ class ListingCard(QFrame):
         if getattr(self, "market_failed", False):
             # the fetch errored - distinct from both "loading" and "nobody
             # else listing", because acting on it would be acting on nothing
-            self.market.setText("market unknown")
+            self.market.setText("Market Unknown")
             self.market.setStyleSheet(f"color: {t.WARN};")
+            self.market.setToolTip(self.market_error or
+                                   "the market lookup failed")
             self.online.setText("")
             return
         if l.market_low is None:
             # "…" is still loading; "only listing" is a finished sweep that
             # found no competition - a good outcome, not a stalled one
-            self.market.setText("only listing" if self.market_known
+            self.market.setText("Only Listing" if self.market_known
                                 else f"{self.spec.best_word.capitalize()} …")
             self.market.setStyleSheet(f"color: {t.WFM_MUTED};")
+            # restore the healthy tooltip - a recovered card must not keep
+            # a stale error from a previous failed sweep
+            self.market.setToolTip("best live price from another trader")
             self.online.setText("")
             return
         beaten = core_repricer.better_than(self.spec.side, l.market_low,
@@ -389,11 +605,16 @@ class ListingCard(QFrame):
         self.market.setText(
             f"{mark}{self.spec.best_word.capitalize()} = {l.market_low}p")
         self.market.setStyleSheet(f"color: {t.WARN if beaten else t.WFM_MUTED};")
+        self.market.setToolTip("best live price from another trader")
         # a separate, always-muted label - not part of the warning
-        self.online.setText(f"· {l.online_count} online")
+        self.online.setText(f"· {l.online_count} Online")
 
-    def set_result(self, text: str, role: str = "muted") -> None:
+    def set_result(self, text: str, role: str = "muted",
+                   tip: str = "") -> None:
         self.result.setText(text)
+        # the label clips (see __init__), so the tooltip is where a message
+        # longer than the leftover space stays readable
+        self.result.setToolTip(tip or text)
         self.result.setStyleSheet(f"color: {ROLE_COLOR[role]};")
 
     def set_thumb(self, pixmap) -> None:
@@ -444,7 +665,7 @@ class EditListingDialog(QDialog):
         lay.addLayout(head)
         lay.addWidget(hairline())
 
-        self.price = self._field(lay, "Price (platinum)", str(l.platinum))
+        self.price = self._field(lay, "Price (Platinum)", str(l.platinum))
         self.qty = self._field(lay, "Quantity", str(l.quantity))
 
         # Rank, for goods that have one. Whether an item ranks is read off the
@@ -464,12 +685,24 @@ class EditListingDialog(QDialog):
                 lambda: tab.client.max_rank(l.slug), self._ranks_ready,
                 lambda _m: None)
 
-        self.limit = self._field(
-            lay, f"{tab.spec.limit_title} (blank = auto)",
-            str(tab.limits.overrides.get(vm.limit_key(l), "")))
-        self.visible = QCheckBox("Visible on warframe.market")
+        if card.archived:
+            saved = tab.view.tabs["Saved For Later"]
+            target = saved.entries.get(card.oid, {}).get("target")
+            self.limit = self._field(
+                lay, "Target Price (Blank = No Watch)",
+                "" if target is None else str(target))
+        else:
+            self.limit = self._field(
+                lay, f"{tab.spec.limit_title} (Blank = Auto)",
+                str(tab.limits.overrides.get(vm.limit_key(l), "")))
+        self.visible = QCheckBox("Visible On warframe.market")
         self.visible.setChecked(l.visible)
         lay.addWidget(self.visible)
+        if card.archived:
+            # a parked listing must stay hidden; the checkbox would be an
+            # un-hide trapdoor. It stays unchecked (l.visible is False), so
+            # _save writes visible=False unchanged.
+            self.visible.hide()
 
         self.status = label("", role="small")
         lay.addWidget(self.status)
@@ -520,18 +753,26 @@ class EditListingDialog(QDialog):
             price = max(1, int(self.price.text().strip()))
             qty = max(1, int(self.qty.text().strip()))
         except ValueError:
-            self.status.setText("price and quantity must be whole numbers")
+            self.status.setText("Price and quantity must be whole numbers")
             self.status.setStyleSheet(f"color: {t.ERR};")
             return
         text = self.limit.text().strip()
-        limit = core_floors.parse_limit(text) if text else None
-        if text and limit is None:
-            self.status.setText("that limit is not a number")
-            self.status.setStyleSheet(f"color: {t.ERR};")
-            return
+        if self.card.archived:
+            parsed = core_archive.parse_target(text)
+            if parsed == "invalid":
+                self.status.setText("That target is not a number")
+                self.status.setStyleSheet(f"color: {t.ERR};")
+                return
+            limit = parsed          # int, or None to clear the watch
+        else:
+            limit = core_floors.parse_limit(text) if text else None
+            if text and limit is None:
+                self.status.setText("That limit is not a number")
+                self.status.setStyleSheet(f"color: {t.ERR};")
+                return
         visible = self.visible.isChecked()
         self.save.setEnabled(False)
-        self.status.setText("saving…")
+        self.status.setText("Saving…")
         self.status.setStyleSheet(f"color: {t.WFM_MUTED};")
         oid = self.card.oid
         rank = self._chosen_rank()
@@ -560,26 +801,35 @@ class EditListingDialog(QDialog):
         # a hand-set price becomes the new reference the auto limit hangs off,
         # otherwise every later default would still derive from the old one
         self.tab.limits.rebase(self.card.oid, price)
-        if was_key != vm.limit_key(l):
-            self.tab.limits.set_override(was_key, None)
-        # A value equal to the derived default is stored as a CLEAR, not a
-        # value - the same rule the inline field uses via Limits.commit, and
-        # the one this dialog's docstring promises. Storing it as an override
-        # would freeze the limit against later baseline movement.
-        if limit is not None and limit == self.tab.limits.auto(
-                self.card.oid, price):
-            limit = None
-        self.tab.limits.set_override(vm.limit_key(l), limit)
-        try:
-            core_market.save_prefs(self.tab.prefs)
-        except OSError:
-            # the server write already succeeded; a failed prefs write must
-            # not wedge the dialog. Say so and close rather than trapping the
-            # user in a dialog they cannot dismiss.
-            self.card.set_result("order saved; preferences not written", "warn")
+        if self.card.archived:
+            # the field edited the archive TARGET, not a floor - persist it
+            # through the view so the file, the inline field and the tab dot
+            # all update together
+            self.tab.view.set_target(self.card.oid, limit)
+            self.card.set_result("Saved", "ok")
+            self.card.paint(None)
         else:
-            self.card.set_result("saved", "ok")
-        self.card.paint(self.tab.limits)
+            if was_key != vm.limit_key(l):
+                self.tab.limits.set_override(was_key, None)
+            # A value equal to the derived default is stored as a CLEAR, not a
+            # value - the same rule the inline field uses via Limits.commit, and
+            # the one this dialog's docstring promises. Storing it as an override
+            # would freeze the limit against later baseline movement.
+            if limit is not None and limit == self.tab.limits.auto(
+                    self.card.oid, price):
+                limit = None
+            self.tab.limits.set_override(vm.limit_key(l), limit)
+            try:
+                core_market.save_prefs(self.tab.prefs)
+            except OSError:
+                # the server write already succeeded; a failed prefs write must
+                # not wedge the dialog. Say so and close rather than trapping the
+                # user in a dialog they cannot dismiss.
+                self.card.set_result(
+                    "Order saved; preferences not written", "warn")
+            else:
+                self.card.set_result("Saved", "ok")
+            self.card.paint(self.tab.limits)
         self.tab.apply_view()
         self.accept()
 
@@ -614,7 +864,7 @@ class ListingsTab(QWidget):
         # -- row 1: the tab-wide repricer offset
         row = QHBoxLayout()
         row.setSpacing(t.SP_SM)
-        row.addWidget(label(f"{self.spec.limit_title}: set price",
+        row.addWidget(label(f"{self.spec.limit_title}: Set Price",
                             role="muted"))
         self.offset = QLineEdit(f"{self.limits.offset:+d}")
         self.offset.setFixedWidth(OFFSET_FIELD_W)
@@ -629,7 +879,7 @@ class ListingsTab(QWidget):
         blurb_lbl.setWordWrap(True)
         row.addWidget(blurb_lbl, 1)
         row.addStretch(0)
-        self.reprice_all_btn = QPushButton(" Reprice all")
+        self.reprice_all_btn = QPushButton(" Reprice All")
         self.reprice_all_btn.setIcon(glyph_icon("reprice", color=t.INK))
         self.reprice_all_btn.setProperty("kind", "money")
         self.reprice_all_btn.setCursor(Qt.PointingHandCursor)
@@ -665,11 +915,11 @@ class ListingsTab(QWidget):
         ctl.addWidget(self.show_mode)
         ctl.addSpacing(t.SP_LG)          # groups, not one undifferentiated run
         ctl.addWidget(label("Visibility", role="muted"))
-        show_all = _flat(" Show all", t.TEXT, "make every order visible",
+        show_all = _flat(" Show All", t.TEXT, "make every order visible",
                          icon="visible")
         show_all.clicked.connect(lambda: self._bulk_visibility(True))
         ctl.addWidget(show_all)
-        hide_all = _flat(" Hide all", t.WARN, "hide every order",
+        hide_all = _flat(" Hide All", t.WARN, "hide every order",
                          icon="hidden")
         hide_all.clicked.connect(lambda: self._bulk_visibility(False))
         ctl.addWidget(hide_all)
@@ -683,6 +933,10 @@ class ListingsTab(QWidget):
         self.area.setFrameShape(QFrame.NoFrame)
         self.area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.body = panel()
+        # a click between cards must still move focus off a limit field so
+        # its blur-revert contract fires (see ListingCard.__init__); ClickFocus
+        # only, so this never joins Tab order
+        self.body.setFocusPolicy(Qt.ClickFocus)
         self.grid = QGridLayout(self.body)
         # right pad so the cards don't butt against the vertical scrollbar
         self.grid.setContentsMargins(0, 0, t.SP_LG, 0)
@@ -739,12 +993,22 @@ class ListingsTab(QWidget):
         card.remove.connect(self._delete)
         card.reprice.connect(self._reprice_one)
         card.wiki.connect(self.view.open_wiki)
+        card.market_open.connect(self._open_market)
         card.limit_typed.connect(self._commit_limit)
+        card.limit_blur.connect(self._limit_blur)
+        card.archive.connect(self._archive)
         card.paint(self.limits)
         thumb = self._thumbs.get(l.slug)
         if thumb is not None:
             card.set_thumb(thumb)
         return card
+
+    def _open_market(self, oid: str) -> None:
+        """The card's storefront shortcut: jump to this item in the Market
+        app. The listing already knows its slug, so no name lookup runs."""
+        card = self.cards.get(oid)
+        if card is not None:
+            self.view.open_market(card.listing.slug, card.listing.name)
 
     def apply_view(self) -> None:
         """Filter, sort, and place the cards. Deferred while the tab is off
@@ -825,6 +1089,13 @@ class ListingsTab(QWidget):
             core_market.save_prefs(self.prefs)
         card.paint_limit(self.limits)
 
+    def _limit_blur(self, oid: str) -> None:
+        """Focus left the limit field without a commit - repaint it from the
+        store so a half-typed value never lingers looking applied."""
+        card = self.cards.get(oid)
+        if card is not None:
+            card.paint_limit(self.limits)
+
     def _sort_changed(self, _value: str) -> None:
         self._paint_direction()
         self.apply_view()
@@ -886,13 +1157,14 @@ class ListingsTab(QWidget):
         self.set_status(msg, "err")
         self._set_busy(False)
 
-    def _card_result(self, oid: str, text: str, role: str) -> None:
+    def _card_result(self, oid: str, text: str, role: str,
+                     tip: str = "") -> None:
         """The only guard a late result needs now: is this order still
         listed? Cards outlive every worker, so widget liveness is not the
         question - staleness is."""
         card = self.cards.get(oid)
         if card is not None:
-            card.set_result(text, role)
+            card.set_result(text, role, tip)
 
     # -- market sweep --------------------------------------------------------
 
@@ -918,10 +1190,11 @@ class ListingsTab(QWidget):
                     # against every rank in the book
                     best, n = best_of(l.slug, exclude=user, rank=l.rank,
                                       subtype=l.subtype)
-                except core_market.MarketError:
+                except core_market.MarketError as exc:
                     # a FAILED fetch is not "nobody else is listing"; flag it
-                    # so the card reads "market unknown", not "only listing"
-                    job.step.emit((l.order_id, None, 0, True))
+                    # so the card reads "market unknown", not "only listing" -
+                    # and carry the reason along so it is not swallowed
+                    job.step.emit((l.order_id, None, 0, str(exc)))
                     continue
                 job.step.emit((l.order_id, best, n, False))
             return None
@@ -939,7 +1212,8 @@ class ListingsTab(QWidget):
         # market_known stays False on a failed fetch, so paint_market shows
         # the pending/unknown state rather than claiming "only listing"
         card.market_known = not failed
-        card.market_failed = failed
+        card.market_failed = bool(failed)
+        card.market_error = failed or ""
         card.paint_market()
 
     # -- thumbnails ----------------------------------------------------------
@@ -992,7 +1266,7 @@ class ListingsTab(QWidget):
         card = self.cards.get(oid)
         if card is None:
             return
-        card.set_result("working…", "muted")
+        card.set_result("Working…", "muted")
         self._set_busy(True)
 
         def ok(message):
@@ -1004,7 +1278,13 @@ class ListingsTab(QWidget):
 
         def bad(msg):
             self._set_busy(False)
-            self._card_result(oid, msg, "err")
+            # the full message goes to a popup, never the card: a long
+            # refusal in the result label once stretched the card column and
+            # broke every card's button row (the tooltip keeps it recoverable)
+            self._card_result(oid, "Failed", "err", tip=msg)
+            failed = self.cards.get(oid)
+            name = failed.listing.name if failed is not None else "this order"
+            QMessageBox.warning(self, name, msg)
 
         self._jobs.append(work.run(fn, ok, bad))
 
@@ -1041,13 +1321,13 @@ class ListingsTab(QWidget):
         if new_q is None:
             # zero is not a quantity - removing the last one is Delete, a
             # different and destructive action
-            card.set_result("use Delete to remove the last one", "warn")
+            card.set_result("Use Delete to remove the last one", "warn")
             return
 
         def fn():
             self.client.update_order(oid, l.platinum, new_q, l.visible)
             l.quantity = new_q
-            return f"quantity {new_q}"
+            return f"Quantity {new_q}"
         self._op(oid, fn, lambda c: c.paint(self.limits))
 
     def _toggle_visible(self, oid: str) -> None:
@@ -1060,12 +1340,28 @@ class ListingsTab(QWidget):
         def fn():
             self.client.update_order(oid, l.platinum, l.quantity, want)
             l.visible = want
-            return "visible" if want else "hidden"
+            return "Visible" if want else "Hidden"
 
         def after(c):
             c.paint(self.limits)
             self.apply_view()       # the Show filter may now exclude it
         self._op(oid, fn, after)
+
+    def _archive(self, oid: str) -> None:
+        """Park this order: ONE hide write to warframe.market, then a local
+        move. The file entry is written only after the hide succeeded - a
+        failed PATCH leaves nothing parked and nothing hidden."""
+        card = self.cards.get(oid)
+        if card is None:
+            return
+        l = card.listing
+
+        def fn():
+            self.client.update_order(oid, l.platinum, l.quantity, False)
+            l.visible = False
+            return "Saved For Later"
+
+        self._op(oid, fn, lambda _c: self.view.archived(oid, self.side))
 
     def _delete(self, oid: str) -> None:
         card = self.cards.get(oid)
@@ -1074,7 +1370,7 @@ class ListingsTab(QWidget):
         if not self._confirm(f"Delete {card.listing.name}?",
                              "This removes the order from warframe.market."):
             return
-        self._op(oid, lambda: (self.client.delete_order(oid), "deleted")[1],
+        self._op(oid, lambda: (self.client.delete_order(oid), "Deleted")[1],
                  lambda _c: self._drop(oid))
 
     def _edit(self, oid: str) -> None:
@@ -1205,19 +1501,409 @@ class ListingsTab(QWidget):
                                else "err", i))
             return len(rows)
 
+        errors: list[str] = []
+
         def each(payload):
             oid, message, role, i = payload
-            self._card_result(oid, message, role)
             card = self.cards.get(oid)
+            if role == "err":
+                # one long refusal per failed card once stretched the whole
+                # column; the card just says "failed" and the messages are
+                # collected into one popup when the run finishes
+                name = card.listing.name if card is not None else oid
+                errors.append(f"{name}: {message}")
+                self._card_result(oid, "Failed", role, tip=message)
+            else:
+                self._card_result(oid, message, role)
             if card is not None:
                 card.market_known = role == "ok"
                 card.market_failed = role != "ok"
                 card.paint(self.limits)
             self.status.setText(f"Repricing all… {i}/{len(rows)}")
 
-        self._jobs.append(work.run_stepped(
-            body, each, lambda _n: self._set_busy(False, "Reprice all done."),
-            self.set_failed))
+        def finished(_n):
+            if errors:
+                self._set_busy(False)
+                self.set_status(f"Reprice all done - {len(errors)} failed.",
+                                "err")
+                QMessageBox.warning(
+                    self, "Reprice all",
+                    f"{len(errors)} of {len(rows)} orders failed:\n\n"
+                    + "\n\n".join(errors))
+            else:
+                self._set_busy(False, "Reprice all done.")
+
+        self._jobs.append(work.run_stepped(body, each, finished,
+                                           self.set_failed))
+
+
+class SavedTab(QWidget):
+    """Listings parked locally: hidden on warframe.market, invisible to the
+    repricer, the sweep and bulk visibility (they are excluded at the fetch
+    partition, so nothing here needs to defend against them), each watched
+    against an optional target price.
+
+    Deliberately smaller than ListingsTab: no offset row, no Reprice all,
+    no Show filter, no bulk buttons, no search - a parking lot, not a
+    trading floor. Cards are the same ListingCard in archived dress, sorted
+    by name, both sides mixed (the side badge says which is which).
+    """
+
+    def __init__(self, view) -> None:
+        super().__init__()
+        self.view = view
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.listings: list[core_market.Listing] = []
+        self.entries: dict[str, dict] = {}       # order_id -> archive entry
+        self.cards: dict[str, ListingCard] = {}
+        self._order: list[str] = []
+        self._thumbs: dict[str, object] = {}
+        self._jobs: list[work.Job] = []
+        self._sweep: work.Job | None = None
+        self._dirty = False
+        self._stretch_row = None
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(*t.TOP_GAP_MARGINS)
+        lay.setSpacing(t.SP_MD)
+        blurb = label(
+            "Parked listings stay hidden on warframe.market and the "
+            "repricer and bulk visibility leave them alone. Set a target "
+            "price and this tab lights up when the market reaches it.",
+            role="muted")
+        blurb.setWordWrap(True)
+        lay.addWidget(blurb)
+        self.status = label("", role="small")
+        lay.addWidget(self.status)
+
+        self.area = QScrollArea()
+        self.area.setWidgetResizable(True)
+        self.area.setFrameShape(QFrame.NoFrame)
+        self.area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.body = panel()
+        # a click between cards must still move focus off a limit field so
+        # its blur-revert contract fires (see ListingCard.__init__); ClickFocus
+        # only, so this never joins Tab order
+        self.body.setFocusPolicy(Qt.ClickFocus)
+        self.grid = QGridLayout(self.body)
+        self.grid.setContentsMargins(0, 0, t.SP_LG, 0)
+        self.grid.setSpacing(t.SP_MD)
+        for c in range(CARD_COLUMNS):
+            self.grid.setColumnStretch(c, 1)
+        self.area.setWidget(self.body)
+        lay.addWidget(self.area, 1)
+
+        self.notice = CenteredNotice(
+            "Nothing Saved For Later",
+            "The box-arrow on any listing parks it here.")
+        self.notice.hide()
+        lay.addWidget(self.notice, 1)
+
+    @property
+    def client(self):
+        return self.view.client
+
+    # -- model -----------------------------------------------------------
+
+    def set_listings(self, rows: list[core_market.Listing],
+                     entries: dict[str, dict]) -> None:
+        """Fresh rows + their archive entries. Same reconcile-not-rebuild
+        contract as ListingsTab: a card outlives everything but its order."""
+        self.listings = rows
+        self.entries = entries
+        alive = {l.order_id for l in rows}
+        for oid in [o for o in self.cards if o not in alive]:
+            card = self.cards.pop(oid)
+            card.setParent(None)
+            card.deleteLater()
+        for l in rows:
+            card = self.cards.get(l.order_id)
+            if card is None:
+                card = self._new_card(l)
+                self.cards[l.order_id] = card
+            else:
+                card.listing = l
+                card.paint(None)
+            card.paint_target(
+                self.entries.get(l.order_id, {}).get("target"))
+        self.apply_view()
+        self._load_thumbs()
+
+    def _new_card(self, l: core_market.Listing) -> ListingCard:
+        side = self.entries.get(l.order_id, {}).get("side", "sell")
+        card = ListingCard(l, vm.spec(side), archived=True)
+        card.edit.connect(self._edit)
+        card.adjust.connect(self._adjust_qty)
+        card.unarchive.connect(self._unarchive)
+        card.remove.connect(self._delete)
+        card.wiki.connect(self.view.open_wiki)
+        card.market_open.connect(self._open_market)
+        card.target_typed.connect(self._commit_target)
+        card.limit_blur.connect(self._target_blur)
+        # a row arriving from a side tab already carries sweep results;
+        # without this flag the card would say "Low …" over known data
+        card.market_known = l.market_low is not None or l.online_count > 0
+        card.paint(None)
+        thumb = self._thumbs.get(l.slug)
+        if thumb is not None:
+            card.set_thumb(thumb)
+        return card
+
+    def _open_market(self, oid: str) -> None:
+        card = self.cards.get(oid)
+        if card is not None:
+            self.view.open_market(card.listing.slug, card.listing.name)
+
+    # -- thumbnails ----------------------------------------------------------
+
+    def _load_thumbs(self) -> None:
+        """Same shape as ListingsTab._load_thumbs - a parked listing carries
+        the thumb path it had on its origin tab, and a fresh card here starts
+        with no picture until this fetches one."""
+        wanted = {l.slug: l.thumb for l in self.listings
+                  if l.thumb and l.slug not in self._thumbs}
+        if not wanted:
+            return
+
+        def body(job):
+            for slug, path in wanted.items():
+                if job.cancelled:
+                    return
+                raw = self.client.fetch_thumb(path)
+                if raw:
+                    job.step.emit((slug, raw))
+            return None
+
+        self._jobs.append(work.run_stepped(body, self._thumb_landed,
+                                           lambda _r: None, lambda _m: None))
+
+    def _thumb_landed(self, payload) -> None:
+        from PySide6.QtGui import QPixmap
+        slug, raw = payload
+        pm = QPixmap()
+        if not pm.loadFromData(raw):
+            return
+        pm = pm.scaled(ICON_PX, ICON_PX, Qt.KeepAspectRatio,
+                       Qt.SmoothTransformation)
+        self._thumbs[slug] = pm
+        for card in self.cards.values():
+            if card.listing.slug == slug:
+                card.set_thumb(pm)
+
+    def drop_row(self, oid: str) -> None:
+        self.listings = [l for l in self.listings if l.order_id != oid]
+        self.entries.pop(oid, None)
+        card = self.cards.pop(oid, None)
+        if card is not None:
+            card.setParent(None)
+            card.deleteLater()
+        self.apply_view()
+        self._update_alert()
+
+    # -- view --------------------------------------------------------------
+
+    def apply_view(self) -> None:
+        """Place cards by name. Deferred while hidden, like every listing
+        surface - a relayout nobody can see is wasted work."""
+        if not self.isVisible():
+            self._dirty = True
+            return
+        self._dirty = False
+        rows = sorted(self.listings, key=lambda l: l.name.lower())
+        self._order = [l.order_id for l in rows]
+        self.body.setUpdatesEnabled(False)
+        try:
+            for i, oid in enumerate(self._order):
+                card = self.cards[oid]
+                self.grid.addWidget(card, i // CARD_COLUMNS,
+                                    i % CARD_COLUMNS)
+                card.setVisible(True)
+            used = (len(self._order) + CARD_COLUMNS - 1) // CARD_COLUMNS
+            if self._stretch_row is not None and self._stretch_row != used:
+                self.grid.setRowStretch(self._stretch_row, 0)
+            self.grid.setRowStretch(used, 1)
+            self._stretch_row = used
+        finally:
+            self.body.setUpdatesEnabled(True)
+        empty = not self._order
+        self.area.setVisible(not empty)
+        self.notice.setVisible(empty)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if self._dirty:
+            self.apply_view()
+
+    # -- flows ---------------------------------------------------------------
+
+    def _unarchive(self, oid: str) -> None:
+        self.view.unarchive(oid)
+
+    def _edit(self, oid: str) -> None:
+        """Edited through its ORIGIN side tab, not this parking-lot one: that
+        gives the dialog the right side badge/spec, and the right floors
+        `Limits` - floors are slug-keyed and persist for when the listing
+        returns, so the edit has to land in the same Limits it will resume
+        under."""
+        card = self.cards.get(oid)
+        if card is None:
+            return
+        side = self.entries.get(oid, {}).get("side", "sell")
+        origin = self.view.tabs["WTS" if side == "sell" else "WTB"]
+        dlg = EditListingDialog(origin, card)
+        dlg.exec()
+        dlg.deleteLater()
+
+    def _adjust_qty(self, oid: str, delta: int) -> None:
+        card = self.cards.get(oid)
+        if card is None:
+            return
+        l = card.listing
+        new_q = vm.adjust_quantity(l.quantity, delta)
+        if new_q is None:
+            # zero is not a quantity - removing the last one is Delete, a
+            # different and destructive action
+            card.set_result("Use Delete to remove the last one", "warn")
+            return
+
+        def fn():
+            # l.visible is False for a parked listing, so this write KEEPS
+            # it hidden - it is passed through, not hardcoded, so a listing
+            # that somehow arrived still visible is not silently re-hidden
+            self.client.update_order(oid, l.platinum, new_q, l.visible)
+            l.quantity = new_q
+            return f"Quantity {new_q}"
+
+        def ok(message):
+            fresh = self.cards.get(oid)
+            if fresh is not None:
+                fresh.paint(None)
+                fresh.set_result(message, "ok")
+
+        def bad(msg):
+            fresh = self.cards.get(oid)
+            if fresh is not None:
+                fresh.set_result("Failed", "err", tip=msg)
+            name = fresh.listing.name if fresh is not None else "this order"
+            QMessageBox.warning(self, name, msg)
+
+        self._jobs.append(work.run(fn, ok, bad))
+
+    def _commit_target(self, oid: str) -> None:
+        card = self.cards.get(oid)
+        if card is None:
+            return
+        parsed = core_archive.parse_target(card.limit.text())
+        if parsed == "invalid":
+            card.paint_target(self.entries.get(oid, {}).get("target"))
+            return
+        self.view.set_target(oid, parsed)
+
+    def _target_blur(self, oid: str) -> None:
+        card = self.cards.get(oid)
+        if card is not None:
+            card.paint_target(self.entries.get(oid, {}).get("target"))
+
+    def _delete(self, oid: str) -> None:
+        card = self.cards.get(oid)
+        if card is None:
+            return
+        if QMessageBox.question(
+                self, f"Delete {card.listing.name}?",
+                "This removes the order from warframe.market.",
+                QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
+            return
+        card.set_result("Working…", "muted")
+
+        def fn():
+            self.client.delete_order(oid)
+            return "Deleted"
+
+        def bad(msg):
+            fresh = self.cards.get(oid)
+            if fresh is not None:
+                fresh.set_result("Failed", "err", tip=msg)
+            name = fresh.listing.name if fresh is not None else "this order"
+            QMessageBox.warning(self, name, msg)
+
+        self._jobs.append(work.run(
+            fn, lambda _msg: self.view.drop_archived(oid), bad))
+
+    # -- sweep -----------------------------------------------------------
+
+    def start_sweep(self) -> None:
+        """Best live price for every parked row, side-correct: a parked WTS
+        listing asks the lowest online SELLER, a parked WTB the highest
+        online BUYER - the same stat its origin tab would have used. One
+        sweep in flight at a time, results land by order_id."""
+        if self._sweep is not None:
+            self._sweep.cancel()
+        rows = list(self.listings)
+        sides = {oid: e.get("side", "sell")
+                 for oid, e in self.entries.items()}
+        if not rows:
+            self._sweep = None
+            self._update_alert()
+            return
+        client = self.client
+        user = self.view.username
+
+        def body(job):
+            for l in rows:
+                if job.cancelled:
+                    return
+                best_of = getattr(
+                    client, vm.spec(sides.get(l.order_id, "sell")).best_method)
+                try:
+                    best, n = best_of(l.slug, exclude=user, rank=l.rank,
+                                      subtype=l.subtype)
+                except core_market.MarketError as exc:
+                    job.step.emit((l.order_id, None, 0, str(exc)))
+                    continue
+                job.step.emit((l.order_id, best, n, False))
+            return None
+
+        self._sweep = work.run_stepped(body, self._market_landed,
+                                       lambda _r: None, lambda _m: None)
+
+    def _market_landed(self, payload) -> None:
+        oid, best, n, failed = payload
+        card = self.cards.get(oid)
+        if card is None:
+            return
+        card.listing.market_low = best
+        card.listing.online_count = n
+        card.market_known = not failed
+        card.market_failed = bool(failed)
+        card.market_error = failed or ""
+        card.paint_market()
+        self._paint_met(oid)
+        self._update_alert()
+
+    def _paint_met(self, oid: str) -> None:
+        """The per-card echo of the dot: WHICH parked listing is ready."""
+        card = self.cards.get(oid)
+        if card is None:
+            return
+        entry = self.entries.get(oid, {})
+        met = core_archive.target_met(entry.get("side", "sell"),
+                                      card.listing.market_low,
+                                      entry.get("target"))
+        card.set_result("Target Reached" if met else "",
+                        "ok" if met else "muted")
+
+    def target_changed(self, oid: str, target: int | None) -> None:
+        card = self.cards.get(oid)
+        if card is not None:
+            card.paint_target(target)
+        self._paint_met(oid)
+        self._update_alert()
+
+    def _update_alert(self) -> None:
+        market = {oid: c.listing.market_low if not c.market_failed else None
+                  for oid, c in self.cards.items()}
+        self.view.set_saved_alert(
+            core_archive.any_target_met(self.entries, market))
 
 
 class CenteredNotice(QWidget):
@@ -1769,19 +2455,23 @@ class MyContractsTab(QWidget):
 
 
 class ListingsView(QWidget):
-    """Header, the three tabs, and the one fetch that feeds both sides."""
+    """Header, the four tabs, and the one fetch that feeds both sides."""
 
-    TAB_NAMES = ("WTS", "WTB", "Contracts")
+    TAB_NAMES = ("WTS", "WTB", "Contracts", "Saved For Later")
 
     def __init__(self, client, session, baseline: dict,
-                 open_wiki=lambda _n: None) -> None:
+                 open_wiki=lambda _n: None,
+                 open_market=lambda _s, _n: None) -> None:
         super().__init__()
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.client = client
         self.username = session.username if session else ""
         self.baseline = baseline
         self.open_wiki = open_wiki
+        self.open_market = open_market
         self.prefs = core_market.load_prefs()
+        self.archive = core_archive.load()
+        self.account = ""            # set from the client on first fetch
         self._busy = False
         self._jobs: list[work.Job] = []
         self._loaded = False
@@ -1862,6 +2552,7 @@ class ListingsView(QWidget):
             b.clicked.connect(lambda _c=False, n=name: self.select(n))
             self.tab_btns[name] = b
             bar.addWidget(b, 1)
+        self.saved_dot = TabDot(self.tab_btns["Saved For Later"])
         boxlay.addLayout(bar)
         boxlay.addWidget(hairline())
 
@@ -1869,7 +2560,8 @@ class ListingsView(QWidget):
         self.stack.setProperty("surface", "tab")
         self.tabs = {"WTS": ListingsTab(self, "sell"),
                      "WTB": ListingsTab(self, "buy"),
-                     "Contracts": MyContractsTab(self)}
+                     "Contracts": MyContractsTab(self),
+                     "Saved For Later": SavedTab(self)}
         for name in self.TAB_NAMES:
             self.stack.addWidget(self.tabs[name])
         boxlay.addWidget(self.stack, 1)
@@ -1925,12 +2617,31 @@ class ListingsView(QWidget):
 
     def _loaded_ok(self, orders: dict) -> None:
         self._done()
+        # account_id was resolved inside my_listings on the worker thread,
+        # so this read is a cache hit, never a request
+        self.account = self.client.account_id()
+        disk = core_archive.load()
+        if not disk["accounts"] and self.archive.get("accounts"):
+            # an empty read over live entries is a FAILED read (load fails
+            # open on I/O errors), not a wipe - keep memory, skip the save
+            disk = self.archive
+        fresh = core_archive.reconcile(
+            disk, self.account,
+            [l.order_id for rows in orders.values() for l in rows])
+        if fresh != self.archive:
+            self.archive = fresh
+            core_archive.save(fresh)
+        archived = core_archive.entries(self.archive, self.account)
+        kept, saved_rows = core_archive.partition(orders, archived)
         for name, side in (("WTS", "sell"), ("WTB", "buy")):
             tab = self.tabs[name]
-            tab.set_listings(orders[side])
+            tab.set_listings(kept[side])
             tab.set_status("")
             tab.start_sweep()
-        self._set_ledger(len(orders["sell"]), vm.ledger_total(orders["sell"]))
+        saved = self.tabs["Saved For Later"]
+        saved.set_listings(saved_rows, archived)
+        saved.start_sweep()
+        self._set_ledger(len(kept["sell"]), vm.ledger_total(kept["sell"]))
 
     def _failed(self, msg: str) -> None:
         self._done()
@@ -1946,3 +2657,59 @@ class ListingsView(QWidget):
         self.order_count.setText(f"{count} {word}  ·")
         self.ledger.setText(f"{total:,}")
         self.ledger_gem.setVisible(True)
+
+    # -- Saved For Later -----------------------------------------------------
+
+    def _refresh_ledger(self) -> None:
+        wts = self.tabs["WTS"].listings
+        self._set_ledger(len(wts), vm.ledger_total(wts))
+
+    def archived(self, oid: str, side: str) -> None:
+        """The hide PATCH succeeded; record the park and move the row."""
+        src = self.tabs["WTS" if side == "sell" else "WTB"]
+        row = next((l for l in src.listings if l.order_id == oid), None)
+        if row is None:
+            return
+        self.archive = core_archive.add(self.archive, self.account, oid,
+                                        side)
+        core_archive.save(self.archive)
+        src.set_listings([l for l in src.listings if l.order_id != oid])
+        saved = self.tabs["Saved For Later"]
+        saved.set_listings(
+            saved.listings + [row],
+            core_archive.entries(self.archive, self.account))
+        self._refresh_ledger()
+
+    def unarchive(self, oid: str) -> None:
+        """Bring a parked listing back - locally only. It is already hidden
+        on warframe.market and STAYS hidden (reprice first, then show), so
+        this makes zero API calls."""
+        saved = self.tabs["Saved For Later"]
+        entry = saved.entries.get(oid)
+        row = next((l for l in saved.listings if l.order_id == oid), None)
+        if entry is None or row is None:
+            return
+        self.archive = core_archive.remove(self.archive, self.account, oid)
+        core_archive.save(self.archive)
+        saved.drop_row(oid)
+        dest = self.tabs["WTS" if entry["side"] == "sell" else "WTB"]
+        dest.set_listings(dest.listings + [row])
+        self._refresh_ledger()
+
+    def drop_archived(self, oid: str) -> None:
+        """A parked order was deleted on warframe.market - entry and card
+        both go."""
+        self.archive = core_archive.remove(self.archive, self.account, oid)
+        core_archive.save(self.archive)
+        self.tabs["Saved For Later"].drop_row(oid)
+
+    def set_target(self, oid: str, target: int | None) -> None:
+        self.archive = core_archive.set_target(self.archive, self.account,
+                                               oid, target)
+        core_archive.save(self.archive)
+        saved = self.tabs["Saved For Later"]
+        saved.entries = core_archive.entries(self.archive, self.account)
+        saved.target_changed(oid, target)
+
+    def set_saved_alert(self, on: bool) -> None:
+        self.saved_dot.set_on(on)

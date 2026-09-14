@@ -64,12 +64,12 @@ class SideSpec(NamedTuple):
 SIDES: dict[str, SideSpec] = {
     "sell": SideSpec(
         "sell", "global_offset", "floors", "floor", "low", "Sold",
-        "Repricer minimum", "repricer min:", " wts ",
+        "Repricer Minimum", "Repricer Min:", " wts ",
         "plat.  Reprice matches the lowest online seller — never undercuts, "
         "never below an item's minimum.", "lowest_online"),
     "buy": SideSpec(
         "buy", "global_offset_buy", "caps", "cap", "high", "Bought",
-        "Repricer maximum", "repricer max:", " wtb ",
+        "Repricer Maximum", "Repricer Max:", " wtb ",
         "plat.  Reprice matches the highest online buyer — never overbids, "
         "never above an item's maximum.", "highest_online"),
 }

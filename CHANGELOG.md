@@ -8,6 +8,52 @@ The current version always lives in `app/core/version.py`.
 
 ## [Unreleased]
 
+### Added
+- Listings: a fourth "Saved For Later" tab. The new park button on every
+  WTS/WTB card (top right, beside the wiki button) hides the listing on
+  warframe.market and moves it to the saved tab, where the repricer,
+  "Reprice All" and bulk visibility never touch it. Saved cards keep their
+  thumbnails and their Edit and ±1 buttons, and the unpark button returns
+  the listing to its original tab (still hidden, ready to re-show).
+- Saved For Later: an optional per-listing Target Price replaces the
+  repricer minimum. When a market sweep finds the price has reached a
+  target (risen to it for sells, fallen to it for buys), a red dot appears
+  on the tab header. The saved list is local to this PC — stored per
+  account in `wfm_archive.json` and reconciled against your live orders on
+  every listings refresh.
+- Listings: the Repricer Min / Target Price field gains a checkmark commit
+  button in a shared frame. It lights up as soon as you type, applies the
+  value on click or Enter, and grays back out; Escape or clicking anywhere
+  else abandons the edit and restores the stored value.
+- Listings: every WTS/WTB card gains a Market button (left of Reprice) that
+  jumps straight to that item in the Market app — no lookup, the listing
+  already knows its slug.
+
+### Changed
+- Mods database refreshed for Update 43.5 "Amir's Shockwave" (Fables &
+  Frontiers): Primed Polar Magazine (Baro), plus the EFV augments Prototype
+  Shock Coils and Overpressured Rounds as Nightwave rank rewards, with their
+  Overframe deep-link ids. Arcane collections verified against the wiki —
+  all nine rosters unchanged (the new Update 43 arcanes drop from Uranus
+  Proxima and are not in any Vosfor collection).
+- Listings: order errors (reprice, sold, ±1, visibility) now open a popup
+  titled with the item name; the card shows a short "failed" marker with the
+  full message in its tooltip. "Reprice all" collects failures into a single
+  summary popup instead of one per order.
+- Listings: card and dialog labels now use Title Case throughout
+  ("Repricer Min:", "Repricer Max:", "Target Price:" and friends).
+- Market/Listings: a 403 from warframe.market now quotes the API's own
+  reason in the error popup instead of a bare status code.
+
+### Fixed
+- Market: posting a listing no longer sends the retired "per trade" field —
+  the warframe.market API started rejecting it, which made every new
+  posting fail. The field is gone from the post dialog too.
+- Listings: a long error message could widen a card's result label and push
+  every card's buttons out of the grid. The label no longer drives the card's
+  width — long text clips (and lives in the tooltip) instead of resizing the
+  layout.
+
 ## [1.1.2] - 2026-08-13
 
 ### Added

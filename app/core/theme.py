@@ -157,6 +157,8 @@ WFM_BUY_BG = "#22404e"     # wtb tag (blue)
 WFM_BUY_FG = "#8ac6dc"
 WFM_RED = "#cf5f4f"
 WFM_RED_DIM = "#55302a"
+WFM_GREEN = "#a3d9af"      # Saved For Later tab accent - pastel jade, matched
+                           # to the badge pink / buy blue softness
 
 # ---- named accents (were bare hex literals) --------------------------------
 RARITY_BRONZE = "#b08a63"  # Common arcanes; also the Vosfor app's card accent
@@ -247,12 +249,17 @@ ICONS: dict[str, Icon] = {
     "collapse":  Icon("chevron_right", "\u25B8"),
     # listing card actions
     "sold":      Icon("check", "\u2714"),
+    "confirm":   Icon("check", "\u2713"),
     "edit":      Icon("edit", "\u270E"),
     "add_one":   Icon("add", "+"),
     "less_one":  Icon("remove", "\u2212"),
     "visible":   Icon("visibility", "\u25C9"),
     "hidden":    Icon("visibility_off", "\u25CC"),
     "reprice":   Icon("sync", "\u27F3"),
+    # Saved For Later: park a listing / bring it back. The Material glyphs
+    # are a box with a down-arrow (in) and an up-arrow (out).
+    "archive":   Icon("archive", "\uE7B8"),
+    "unarchive": Icon("unarchive", "\uE898"),
     # the watchlist star: one glyph, filled when watched
     "watch":     Icon("star", "\u2606"),
     # Dev data-explorer apps + their group
@@ -453,6 +460,7 @@ _LIGHT = dict(
     WFM_MUTED="#716544",
     WFM_BADGE_BG="#dabfce", WFM_BADGE_FG="#7c3a5f", WFM_BUY_BG="#c0d4da",
     WFM_BUY_FG="#2b5462", WFM_RED="#b4443a", WFM_RED_DIM="#cb9e91",
+    WFM_GREEN="#3f7a4c",
     RARITY_BRONZE="#926537", RARITY_SILVER="#697f87", WEB_ACCENT="#656f79",
     REP_UP="#59845f", REP_DOWN="#9d5a4e",
 )
@@ -492,6 +500,7 @@ _CHRISTMAS_DARK = dict(
     WFM_BADGE_BG="#a8352b", WFM_BADGE_FG="#f6e2d4",
     WFM_BUY_BG="#1d3a2a", WFM_BUY_FG="#9ed7b2",
     WFM_RED="#d15a4a", WFM_RED_DIM="#4a2620",
+    WFM_GREEN="#8fd0a4",
     RARITY_BRONZE="#c08a5a", RARITY_SILVER="#b6c2ca", WEB_ACCENT="#9aa89e",
     REP_UP="#66a870", REP_DOWN="#b06a5e",
     FONT_FACE={**_OROKIN_FACES, "app_title": "Mountains of Christmas",
@@ -539,6 +548,7 @@ _CHRISTMAS_LIGHT = dict(
     WFM_BADGE_BG="#d02b22", WFM_BADGE_FG="#fff2ef",
     WFM_BUY_BG="#2fb35f", WFM_BUY_FG="#08340f",
     WFM_RED="#cf2f2a", WFM_RED_DIM="#eab6b1",
+    WFM_GREEN="#1f7a44",
     RARITY_BRONZE="#b07a45", RARITY_SILVER="#8a97a0", WEB_ACCENT="#4f6a57",
     REP_UP="#2f9a50", REP_DOWN="#c0463a",
     FONT_FACE={**_OROKIN_FACES, "app_title": "Mountains of Christmas",
@@ -595,7 +605,7 @@ _DEV_BOXES = dict(
     WFM_PINK="#000000", WFM_MUTED="#000000", WFM_BADGE_FG="#000000",
     WFM_BUY_FG="#000000", WFM_RED="#000000", RARITY_BRONZE="#000000",
     RARITY_SILVER="#000000", WEB_ACCENT="#000000", REP_UP="#000000",
-    REP_DOWN="#000000",
+    REP_DOWN="#000000", WFM_GREEN="#000000",
     FONT_FACE=_BE_VIETNAM,
 )
 _DEV_BOUNDARIES = dict(
@@ -616,7 +626,7 @@ _DEV_BOUNDARIES = dict(
     WFM_PINK="#5a68f6", WFM_MUTED="#82f53d", WFM_BADGE_FG="#f65ac3",
     WFM_BUY_FG="#3deef5", WFM_RED="#f6cf5a", RARITY_BRONZE="#913df5",
     RARITY_SILVER="#5af674", WEB_ACCENT="#f53d55", REP_UP="#5a9cf6",
-    REP_DOWN="#c0f53d",
+    REP_DOWN="#c0f53d", WFM_GREEN="#3df58e",
     FONT_FACE=_BE_VIETNAM,
 )
 
@@ -649,7 +659,8 @@ _INK_TOKENS = ("TEXT", "MUTED", "CONSOLE_FG", "OK", "ACCENT", "WARN", "ERR",
                "INK", "GOLD_DIM", "BORDER", "WFM_EDGE", "FIELD_EDGE",
                "HAIRLINE", "PLAT", "WFM_TEAL", "WFM_PINK", "WFM_MUTED",
                "WFM_BADGE_FG", "WFM_BUY_FG", "WFM_RED", "RARITY_BRONZE",
-               "RARITY_SILVER", "WEB_ACCENT", "REP_UP", "REP_DOWN")
+               "RARITY_SILVER", "WEB_ACCENT", "REP_UP", "REP_DOWN",
+               "WFM_GREEN")
 _DEV_FONTS = {**{k: "#d0d0d0" for k in _FILL_TOKENS},
               **{k: "#000000" for k in _INK_TOKENS},
               "FONT_FACE": _DEV_FONTS_FACES}

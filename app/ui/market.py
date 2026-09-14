@@ -1194,8 +1194,6 @@ class PostOrderDialog(QDialog):
 
         self.price = self._field(lay, "Price (platinum)", "")
         self.qty = self._field(lay, "Quantity", "1")
-        self.per_trade = self._field(lay, "Per trade (max units in one trade)",
-                                     "1")
 
         # Rank picker, revealed only once /v2/item confirms the good ranks and
         # how far (never a table kept here - stale the week a new arcane ships).
@@ -1247,16 +1245,12 @@ class PostOrderDialog(QDialog):
         try:
             plat = int(self.price.text().strip())
             qty = int(self.qty.text().strip() or "1")
-            per = int(self.per_trade.text().strip() or "1")
         except ValueError:
-            self._say("price, quantity and per-trade must be whole numbers",
+            self._say("price and quantity must be whole numbers",
                       "err")
             return
-        if plat <= 0 or qty <= 0 or per <= 0:
-            self._say("price, quantity and per-trade must be positive", "err")
-            return
-        if per > qty:
-            self._say("per-trade can't exceed the quantity", "err")
+        if plat <= 0 or qty <= 0:
+            self._say("price and quantity must be positive", "err")
             return
         rank = None
         if self.rank.isVisible():
@@ -1272,7 +1266,7 @@ class PostOrderDialog(QDialog):
         def do():
             item_id = client.item_detail(slug).get("id")
             return client.create_order(item_id, side, plat, qty,
-                                       per_trade=per, visible=visible,
+                                       visible=visible,
                                        rank=rank)
 
         self._job = run(do, self._posted, self._failed)

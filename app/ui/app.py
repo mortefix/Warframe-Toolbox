@@ -443,7 +443,8 @@ class MainWindow(QWidget):
                 return SignInRequired(self.link_account)
             from ui.listings import ListingsView
             return ListingsView(self.market, self.session,
-                                self.listing_baseline, self.open_wiki)
+                                self.listing_baseline, self.open_wiki,
+                                self.open_market_item)
         if key == "vosfor":
             from ui.vosfor import VosforView
             return VosforView(self.settings, self.open_wiki,
@@ -742,6 +743,14 @@ class MainWindow(QWidget):
                 tab.search.setText(name)    # not traded: leave the search set
 
         self._market_link_job = work.run(find, done)
+
+    def open_market_item(self, slug: str, name: str) -> None:
+        """Deep-link the Market app when the caller already holds the slug
+        (a listing card does) - no name lookup, so no worker needed."""
+        self.navigate("market")
+        page = self.stack.widget(self._pages["market"])
+        if hasattr(page, "open_in_market"):
+            page.open_in_market(slug, name)
 
     # -- account and data ---------------------------------------------------
 

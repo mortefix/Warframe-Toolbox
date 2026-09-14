@@ -185,10 +185,19 @@ class MarketClient:
             # NOT the same thing as 401: a valid session can still be told
             # "you may not do THIS" - a price-edit PUT on an auction, for
             # instance, 403s while every read on the same session works.
-            raise MarketError("warframe.market refused this action "
-                              "(HTTP 403). If other actions work, your "
-                              "session is fine and this operation simply "
-                              "isn't allowed.")
+            # Best-effort: append whatever reason the API itself gave, since
+            # the fixed refusal text alone left a real 403 undiagnosable.
+            detail = ""
+            try:
+                err = r.json().get("error")
+                if err:
+                    detail = f" The API said: {json.dumps(err)[:200]}"
+            except ValueError:
+                pass
+            raise MarketError(
+                "warframe.market refused this action (HTTP 403). If other "
+                "actions work, your session is fine and this operation "
+                "simply isn't allowed." + detail)
         if not r.ok:
             raise MarketError(http_error_message(r.status_code, r.text))
         try:
@@ -583,15 +592,18 @@ class MarketClient:
         self._req("PATCH", f"/v2/order/{order_id}", body)
 
     def create_order(self, item_id: str, order_type: str, platinum: int,
-                     quantity: int = 1, per_trade: int = 1,
+                     quantity: int = 1,
                      visible: bool = True, rank: int | None = None,
                      subtype: str | None = None) -> str:
-        """POST a NEW order. `order_type` is 'sell'/'buy'. `perTrade` is the max
-        units exchanged in one trade and is REQUIRED by the v2 API (the create
-        400s without it). `rank`/`subtype` are omitted when None (an order for a
-        good that does not rank has no rank field). Returns the new order id."""
+        """POST a NEW order. `order_type` is 'sell'/'buy'. `rank`/`subtype` are
+        omitted when None (an order for a good that does not rank has no rank
+        field). Returns the new order id.
+
+        There used to be a `perTrade` field here (max units exchanged in one
+        trade). The v2 API now REJECTS it as an invalid field, so it was
+        removed - do not re-add it without re-confirming against the live API."""
         body = {"itemId": item_id, "type": order_type, "platinum": platinum,
-                "quantity": quantity, "perTrade": per_trade, "visible": visible}
+                "quantity": quantity, "visible": visible}
         if rank is not None:
             body["rank"] = rank
         if subtype:
