@@ -8,6 +8,32 @@ The current version always lives in `app/core/version.py`.
 
 ## [Unreleased]
 
+### Changed
+- Mods database refreshed for Update 44 "Iceblade of Narin": the four new
+  Warframe augments join their syndicate lists - Brood's Oversurge (Oraxia,
+  Cephalon Suda / New Loka), Infernum (Uriel, Steel Meridian / Perrin
+  Sequence), Cold Front (Frost) and Gastroparesis (Grendel) - each with its
+  card art and Overframe deep link. Banshee's reworked augments carry their
+  new names (Sonic Fracture is now Sonic Siphon, Resonating Quake is now
+  Gaseous Quake), and Augmented Sonar is gone, as DE's own data no longer
+  ships it.
+- Arcanes re-verified against DE's export: Update 44 added none, and all
+  nine Vosfor collections are unchanged. The update's new Warframes and
+  weapons (Narin, Citrine Prime, Nunchasa, Aksondol, Steflos Prime,
+  Corufell Prime) need no shipped data - the app already resolves them
+  from the Public Export it syncs on its own.
+
+### Fixed
+- Mods: Inaros's Scarab Shell augment showed as "Negation Swarm", the name
+  it lost in Update 35.5 - the wiki keeps BOTH names for a renamed mod under
+  one id, and the build picked between them by alphabetical accident. DE's
+  export name now settles it, so a rename can no longer ship stale. (The
+  same accident was about to ship "Resonating Quake" after Update 44.)
+- Mods: Swift Bite, Vampiric Grasp and The Relentless Lost sat in the
+  uncategorised bucket marked untradable. The wiki lists a path DE does not
+  ship for each, which split every one into two rows and left the wrong row
+  canonical; they now appear under the syndicate that sells them.
+
 ## [1.2.0] - 2026-09-13
 
 ### Added
