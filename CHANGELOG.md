@@ -9,10 +9,12 @@ The current version always lives in `app/core/version.py`.
 ## [Unreleased]
 
 ### Added
+- Web Apps: the official Warframe Forums and browse.wf's live world state,
+  between Wiki and Overframe.
 - Market watchlist: give a watched item a target price. When the cheapest
   online seller is at or below it, the row is outlined in gold and says so,
   and the Watchlist tab shows how many items are at their target.
-- Keyboard shortcuts: Ctrl+1 to Ctrl+9 switch pages in sidebar order (each
+- Keyboard shortcuts: Ctrl+1 to Ctrl+9, then Ctrl+0, switch pages in sidebar order (each
   sidebar entry's tooltip shows its key), Ctrl+F jumps to the current page's
   search box, and F5 refreshes the current page.
 - One loading look for content that arrives late: the Warframe.com sign-in
@@ -24,6 +26,8 @@ The current version always lives in `app/core/version.py`.
   setup. Re-running Setup shows whatever it is currently set to.
 
 ### Changed
+- Market: a dimmed dot now separates a trader's name from their reputation
+  in the order book.
 - Your warframe.market sign-in is now stored encrypted for your Windows
   account, so a copied, zipped or backed-up data folder no longer carries a
   usable token. Existing sign-ins are converted the first time the app
@@ -78,6 +82,21 @@ The current version always lives in `app/core/version.py`.
   from the Public Export it syncs on its own.
 
 ### Fixed
+- Web apps: returning to the Wiki, Forums, Browse.wf or Overframe tab no
+  longer blinks. Every return used to blank the page again about half a
+  second after it appeared (caused by older workarounds for a page stuck
+  behind black, which are removed), and showed a bare frame first. The tab
+  is now prepared just before it is shown, so it appears already drawn. The
+  very first look at one tab after starting the app can still show a bare
+  background for a fraction of a second.
+- Mods: eight mods that exist in Warframe's data files but were never
+  released showed as collectible cards with no picture and counted toward
+  your total: Primed Charged Chamber, Primed Blunderbuss, Primed Fast
+  Deflection, Soaring Truth, Fizzbang Flourish, Air Martial, Harrowed Hook
+  and Necramech Stamina. They are now treated like vaulted mods - hidden,
+  and not counted, unless you own one, in which case it appears under
+  Vaulted. The obtainable total drops from 1525 to 1517. (Primed Chamber,
+  the real mod, is unaffected.)
 - Vosfor: with more than 100,000 Vosfor the purchase plan stopped at 500
   packs, still claimed the full pack count, and called the unspent Vosfor
   "left, short of a pack". The plan now uses the whole balance, counts the

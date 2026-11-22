@@ -112,6 +112,10 @@ def chrome_user_agent() -> str:
 #: than a network stub in every test.
 AUTOLOAD = True
 
+#: How long a freshly preloaded, still-hidden page is left drawing before it
+#: sleeps again (see WebAppView._load_finished).
+WARM_MS = 1200
+
 
 class Interceptor(QWebEngineUrlRequestInterceptor):
     """Network-level blocking, the same rule the WebView2 handler applied.
@@ -394,7 +398,7 @@ class WebAppView(QWidget):
         self.app = app
         self.setAttribute(Qt.WA_StyledBackground, True)
         self._loaded = False
-        self._first_paint_done = False
+        self._warmed = False            # see _load_finished
         self._want_url: str | None = None
 
         lay = QVBoxLayout(self)
@@ -548,18 +552,42 @@ class WebAppView(QWidget):
             # so launching the app never touches the network
             self._loaded = True
             self.view.setUrl(QUrl(self.app.url))
-        else:
-            # returning to a tab that already loaded: its surface may still
-            # hold whatever was on screen when it was hidden
-            QTimer.singleShot(0, self._repaint)
-            # ... and once the swap has had time to land, the lifecycle nudge
-            # (see _nudge) quietly heals the case where the new surface never
-            # received a frame - the stuck-black screen a user could only fix
-            # by clicking away and back
-            QTimer.singleShot(450, self._nudge)
 
     def is_navigated(self) -> bool:
         return self._loaded
+
+    # -- showing without a blank frame ---------------------------------------
+    #
+    # A hidden tab's page is asleep: Chromium stops drawing it and drops its
+    # last frame, which is what keeps four live sites from costing CPU while
+    # you are on another screen (measured: 1.7% of a core asleep, 8.2% kept
+    # awake). The price was that a tab coming back had nothing to show until
+    # the page drew again - about two frames of bare background on every
+    # return. wake() starts that drawing while the PREVIOUS screen is still
+    # up; the shell switches a moment later (see MainWindow.navigate), by
+    # which time the frame exists.
+    #
+    # History, so nobody re-adds them: this replaced three workarounds for a
+    # page stuck behind black - hiding and re-showing the view on return,
+    # hiding the page for 30 ms at +450 ms, and a 1px scroll after every
+    # load. Measured against the real sites (screen captures every ~15 ms
+    # after each switch, 2026-11-22): WITH them every return blanked again
+    # at ~480 ms and took ~530 ms to settle; WITHOUT them it settled in
+    # ~30 ms, and no page stuck black in ~60 switches, in-page navigations,
+    # minimise/restores, resizes and long idles. The stuck page they were
+    # written for has one known cause - a second process holding the browser
+    # profile, see PROFILE_DIR - and that is prevented at the source.
+
+    def wake(self) -> None:
+        """Start the page drawing ahead of being shown. No-op for a tab that
+        has never loaded: there is no frame to prepare."""
+        if self._loaded:
+            self.view.page().setVisible(True)
+
+    def sleep(self) -> None:
+        """Undo a wake() that was not followed by a show."""
+        if not self.isVisible():
+            self.view.page().setVisible(False)
 
     # -- feedback ------------------------------------------------------------
 
@@ -572,48 +600,6 @@ class WebAppView(QWidget):
     def _load_progress(self, pct: int) -> None:
         self.status.setText(f"loading… {pct}%")
 
-    def _repaint(self) -> None:
-        """Make the view rebuild its backing surface.
-
-        `update()` alone is not enough: a QWebEngineView hidden inside a
-        QStackedWidget can lose its composited surface entirely and come back
-        BLACK - the page is alive, there is simply nothing to show. Hiding and
-        re-showing the render widget forces Chromium to hand over a new one,
-        which is cheap and, unlike a reload, does not lose scroll position or
-        session state.
-        """
-        if not self.isVisible():
-            return
-        self.view.hide()
-        self.view.show()
-        self.view.update()
-
-    def _nudge(self) -> None:
-        """The stuck-black-screen self-heal.
-
-        A reclaimed surface occasionally never receives a frame: the page is
-        alive behind solid black until another tab switch forces another
-        swap. Detecting that by pixel-probing was tried and REJECTED - the
-        test suite showed a healthy rendered page still grabs as black under
-        this engine, so any probe-then-teardown design tears down working
-        pages. Instead, an unconditional nudge that is harmless either way:
-        hide the PAGE (Chromium's lifecycle visibility, not the Qt widget)
-        for one beat and show it again. The renderer re-submits a frame into
-        the EXISTING surface - a stuck screen recovers, a healthy one keeps
-        its last frame throughout and shows nothing at all."""
-        if not (self.isVisible() and self._loaded):
-            return
-        self.view.page().setVisible(False)
-        QTimer.singleShot(30, self._nudge_back)
-
-    def _nudge_back(self) -> None:
-        """Restore only while the tab is still on screen. If it was hidden
-        during the beat, leave the page hidden - the view's own show handling
-        makes it visible again on the next switch, and forcing it visible now
-        would have a hidden tab rendering in the background."""
-        if self.isVisible():
-            self.view.page().setVisible(True)
-
     def _load_finished(self, ok: bool) -> None:
         self.status.setText("" if ok else "could not load this page")
         self.status.setStyleSheet(f"color: {t.ERR if not ok else t.MUTED};")
@@ -623,36 +609,23 @@ class WebAppView(QWidget):
             self.blocked.setText(f"{n} blocked" if n else "")
             self.blocked.setStyleSheet(f"color: {t.MUTED};")
         self._paint_nav()
-        # Reclaim the composited surface ONCE, on the first successful paint -
-        # that is the "first open shows only the background" case. Doing it on
-        # EVERY loadFinished forced a surface swap at the end of every
-        # navigation, and a surface torn down and rebuilt mid-frame is exactly
-        # what smeared a torn band across the page as it settled. Tab-return
-        # still gets its repaint via showEvent, which is the OTHER case that
-        # genuinely loses the surface.
-        if ok and not self._first_paint_done:
-            self._first_paint_done = True
-            self._repaint()
-            # first paint can strand a black surface the same way tab-return
-            # can - give it the same one-shot self-heal
-            QTimer.singleShot(450, self._nudge)
-        if ok:
-            # Load-time stuck-black heal, discovered empirically by the user:
-            # SCROLLING un-sticks a page that loaded behind solid black. So
-            # every finished load gets an invisible scroll - one pixel down,
-            # back up on the next animation frame. The page processes two
-            # real scroll events ~16ms apart; the viewport never visibly
-            # moves. Runs for hidden (preloading) tabs too - healing before
-            # the first look is the point.
-            QTimer.singleShot(80, self._scroll_nudge)
+        # A page preloaded behind another screen has never been drawn, and
+        # neither has the widget that draws it: the first look at each tab
+        # showed bare background for up to ~0.4 s while both set themselves
+        # up. Do that once now, out of sight - wake the page, have the view
+        # render itself offscreen (the picture is thrown away; making it is
+        # the point), and let the page sleep again. Measured on the real
+        # sites: waking alone left all four tabs bare on first look; with
+        # the offscreen render, one of four, and for half as long.
+        if ok and not self._warmed and not self.isVisible():
+            self._warmed = True
+            self.wake()
+            QTimer.singleShot(WARM_MS // 2, self._warm_render)
+            QTimer.singleShot(WARM_MS, self.sleep)
 
-    def _scroll_nudge(self) -> None:
-        """The imperceptible 1px down/up scroll (see _load_finished)."""
-        if not self._loaded:
-            return
-        self.view.page().runJavaScript(
-            "window.scrollBy(0, 1);"
-            "requestAnimationFrame(() => window.scrollBy(0, -1));")
+    def _warm_render(self) -> None:
+        if not self.isVisible():        # shown meanwhile: it is drawing for real
+            self.view.grab()
 
     def _paint_nav(self, *_args) -> None:
         """`*_args` so this can be connected straight to `urlChanged`, which

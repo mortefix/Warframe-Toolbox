@@ -250,6 +250,7 @@ ICONS: dict[str, Icon] = {
     "live":      Icon("live_tv", "\uE787"),
     "wiki":      Icon("menu_book", "\uE82D"),
     "builds":    Icon("construction", "\uE90F"),
+    "forums":    Icon("forum", "\uE8F2"),
     "mail":      Icon("mail", "\uE715"),
     "delete":    Icon("delete", "\uE74D"),
     "bookmarks": Icon("list", "\uE8A4"),

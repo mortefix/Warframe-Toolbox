@@ -47,6 +47,12 @@ from ui.widgets import (Dot, Finial, button_sheet,  # noqa: E402
                         clear_pixmap_cache, hairline, label, logo_pixmap,
                         panel, restyle, vline)
 
+#: How long a web tab is given to draw before it is switched to (see
+#: MainWindow._show_page). Measured on the real sites 2026-11-22: with 30 ms
+#: a return from a native screen still showed a bare frame (settled at
+#: ~12 ms after the switch); with 45 ms and 70 ms it settled within 1-2 ms.
+WEB_WAKE_MS = 45
+
 SIDEBAR_MIN_WIDTH = 150
 #  finial rail + glyph + the nav button's left/right padding. Every row shares
 #  this exact layout; the gold finial marks the current one.
@@ -263,6 +269,7 @@ class MainWindow(QWidget):
         self._rows: dict[str, NavRow] = {}
         self._pages: dict[str, int] = {}   # nav key -> QStackedWidget index
         self.current = ""
+        self._waking = None             # a web tab being woken (see _show_page)
         # The account link is the cached session file: a sign-in survives
         # to the next launch.
         self.session = core_session.load()
@@ -947,13 +954,48 @@ class MainWindow(QWidget):
         """
         if key not in self._pages:
             self._pages[key] = self.stack.addWidget(self._build(key))
-        self.stack.setCurrentIndex(self._pages[key])
+        self._show_page(key)
         self.current = key
         # a STATIC app-name prefix in front of the loaded screen's name, so the
         # header always reads "Warframe Toolbox - <screen>"
         name = core_nav.labels(TOOLS).get(key, "")
         self.title.setText(f"{APP_TITLE} - {name}" if name else APP_TITLE)
         self._paint_active(key)
+
+    def _show_page(self, key: str) -> None:
+        """Bring `key`'s page to the front of the stack.
+
+        A loaded web tab is woken first and shown WEB_WAKE_MS later: its
+        page is asleep while hidden and has no frame to show, so switching
+        at once put two frames of bare background on screen on every return
+        (see WebAppView.wake). The screen you are leaving stays up for that
+        moment - a pause too short to see, in place of a blink that is not.
+        Everything else, and a web tab that has never loaded, switches at
+        once."""
+        page = self.stack.widget(self._pages[key])
+        self._waking = None             # supersedes any switch still pending
+        wake = getattr(page, "wake", None)
+        if (wake is None or not page.is_navigated() or not self.isVisible()
+                or self.stack.currentWidget() is page):
+            self.stack.setCurrentIndex(self._pages[key])
+            return
+        wake()
+        self._waking = key
+        QTimer.singleShot(WEB_WAKE_MS, lambda: self._finish_wake(key))
+
+    def _finish_wake(self, key: str) -> None:
+        index = self._pages.get(key)
+        if index is None:
+            return                      # the page was rebuilt away meanwhile
+        page = self.stack.widget(index)
+        if self._waking != key:
+            # the user went somewhere else inside the pause: put the page
+            # back to sleep unless that somewhere is this page after all
+            if page is not None and hasattr(page, "sleep"):
+                page.sleep()
+            return
+        self._waking = None
+        self.stack.setCurrentIndex(index)
 
     def _paint_active(self, key: str) -> None:
         """The gold finial + highlight on the selected row; every other row off."""

@@ -27,6 +27,10 @@ WEB_APPS: tuple[WebApp, ...] = (
     # sharing the constant makes that true by construction rather than by
     # comment
     WebApp("web_wiki", "Wiki", theme.WIKI_ICON, "https://wiki.warframe.com/"),
+    WebApp("web_forums", "Forums", "forums", "https://forums.warframe.com/"),
+    # browse.wf's live page: world state (fissures, cycles, invasions, the
+    # trader) read from the game's own data
+    WebApp("web_live", "Browse.wf", "live", "https://browse.wf/live"),
     WebApp("web_builds", "Overframe", "builds", "https://overframe.gg/"),
 )
 

@@ -508,7 +508,12 @@ class MarketTab(QWidget):
         if rep:
             # only the ARROW is coloured - a coloured number stops reading as
             # a quantity and starts reading as a status
-            arrow = label(" " + icon_text(rep.arrow, ROLE_COLOR[rep.role]),
+            # a dimmed middle dot parts the name from the reputation. The
+            # "small" role's own muted ink, not the fainter INK_FAINT the
+            # listing cards use for theirs: at that strength the dot could
+            # not be seen beside a full-strength name.
+            h.addWidget(label("·", role="small"))
+            arrow = label(icon_text(rep.arrow, ROLE_COLOR[rep.role]),
                           role="small")
             arrow.setToolTip("trader reputation")
             h.addWidget(arrow)

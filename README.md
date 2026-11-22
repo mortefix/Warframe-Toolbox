@@ -43,7 +43,7 @@ Pick an app from the sidebar. Nothing loads until you open it.
   and keep a **Watchlist** of items to track, each with an optional target
   price that marks the row when a seller reaches it. Each row has a **✉**
   button that copies a ready-to-send in-game trade whisper.
-- **Keyboard** — **Ctrl+1** to **Ctrl+9** switch pages in sidebar order (each
+- **Keyboard** — **Ctrl+1** to **Ctrl+9**, then **Ctrl+0**, switch pages in sidebar order (each
   sidebar entry's tooltip shows its key), **Ctrl+F** jumps to the current
   page's search box, and **F5** refreshes the current page.
 - **Vosfor** — a planner for **Arcane Dissolution**. It ranks the nine arcane
@@ -53,8 +53,9 @@ Pick an app from the sidebar. Nothing loads until you open it.
   from AlecaFrame (or you tick them off by hand).
 - **Mods** — a collection tracker for your mods: progress by weapon category,
   mod set, and named collection, with each mod shown as a card.
-- **Wiki · Overframe** — the Warframe Wiki and Overframe.gg embedded right in
-  the app, with a built-in **ad blocker** on by default. Item names throughout
+- **Wiki · Forums · Browse.wf · Overframe** — the Warframe Wiki, the official
+  Warframe Forums, browse.wf's live world state and Overframe.gg embedded
+  right in the app, with a built-in **ad blocker** on by default. Item names throughout
   the app link straight into the Wiki tab.
 
 ## Your account & data — what's collected and why

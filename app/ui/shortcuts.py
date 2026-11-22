@@ -1,6 +1,7 @@
 """ui/shortcuts.py - the window's keyboard shortcuts.
 
   Ctrl+1 … Ctrl+9   go to the sidebar's 1st … 9th entry, top to bottom
+  Ctrl+0            the 10th (the row of digits, left to right)
   Ctrl+F            put the cursor in the current screen's search box
   F5                refresh the current screen
 
@@ -30,13 +31,14 @@ REFRESH_METHODS = (
     ("refresh_source", ()),         # the DevTools explorers
 )
 
-MAX_PAGES = 9
+MAX_PAGES = 10
 
 
 def page_hint(index: int) -> str:
     """The shortcut that opens the sidebar's `index`th entry (0-based), as
-    text for its tooltip. '' past the ninth - there is no Ctrl+10."""
-    return f"Ctrl+{index + 1}" if 0 <= index < MAX_PAGES else ""
+    text for its tooltip: Ctrl+1 … Ctrl+9, then Ctrl+0 for the tenth, as
+    the digit row reads. '' past that."""
+    return f"Ctrl+{(index + 1) % 10}" if 0 <= index < MAX_PAGES else ""
 
 
 def _shown_tab(page: QWidget) -> QWidget | None:
@@ -127,7 +129,7 @@ def install(win, keys: list[str]) -> list[QShortcut]:
         made.append(sc)
 
     for i, key in enumerate(keys[:MAX_PAGES]):
-        bind(f"Ctrl+{i + 1}", lambda k=key: win.navigate(k))
+        bind(page_hint(i), lambda k=key: win.navigate(k))
     bind(QKeySequence.Find, lambda: focus_search(win.stack.currentWidget()))
     bind(QKeySequence.Refresh, lambda: refresh(win.stack.currentWidget()))
     return made

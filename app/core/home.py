@@ -60,6 +60,10 @@ NATIVE = (
 WEB_BLURBS = {
     "web_wiki": "The official Warframe wiki, embedded - look up anything "
                 "without leaving the app.",
+    "web_forums": "The official Warframe forums, embedded - patch notes, "
+                  "dev workshops and player discussion.",
+    "web_live": "browse.wf's live world state, embedded - fissures, cycles, "
+                "invasions and the Void Trader at a glance.",
     "web_builds": "Overframe's builds and tier lists, embedded - with the "
                   "Toolbox ad blocker on duty.",
 }
