@@ -8,6 +8,8 @@ The current version always lives in `app/core/version.py`.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-22
+
 ### Added
 - Web Apps: the official Warframe Forums and browse.wf's live world state,
   between Wiki and Overframe.
