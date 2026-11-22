@@ -14,6 +14,7 @@ The current version always lives in `app/core/version.py`.
   setup. Re-running Setup shows whatever it is currently set to.
 
 ### Changed
+- Mods: the shade slides open and closed more slowly (0.42s, was 0.25s).
 - Setup wizard: when the Warframe.com or warframe.market step succeeds, a
   green line beside the Back button says so and tells you to press Next.
 - "Launch the Toolbox when Warframe starts" now follows the Windows startup
@@ -59,6 +60,9 @@ The current version always lives in `app/core/version.py`.
   from the Public Export it syncs on its own.
 
 ### Fixed
+- Mods: picking a collection no longer shows the previous collection's
+  progress bar under the new name while it loads (the bar could rise and
+  then fall for a single pick). It stays empty until the count is in.
 - Connecting your Warframe.com profile never completed: the website removed
   the page the Toolbox read your account ID from, so the wizard and
   Settings sat on a signed-in page for ever and Home's Profile light stayed

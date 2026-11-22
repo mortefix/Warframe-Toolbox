@@ -33,7 +33,7 @@ from ui.widgets import Dropdown, label, panel
 
 _TILE_COLS = 5
 _SET_COLS = 8
-_SLIDE_MS = 250
+_SLIDE_MS = 420          # the shade's travel time (250 read as a snap, not a slide)
 _HANDLE_H = 20          # the shade's grab-handle strip
 
 # The wall's symmetric gutters: border -> first card must equal last card ->
@@ -579,6 +579,14 @@ class ModsTreasuryView(QWidget):
             self._head_line.setText(line)
             self._head_line.show()
             self._hero_line.hide()
+            # While the picked collection is still loading, `_stats` belongs
+            # to the PREVIOUS one. Drawing it put the last collection's
+            # progress under the new collection's name for the length of the
+            # slide, then jumped to the real figure - so the bar could rise
+            # and fall for a single pick. An empty track says "not counted
+            # yet" instead.
+            if self._loading:
+                owned, total = 0, 0
             self._set_hero_bar(owned, total)
             self._riven_line.hide()
             self.search_all.hide()
