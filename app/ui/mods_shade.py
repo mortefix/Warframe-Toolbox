@@ -19,7 +19,7 @@ from __future__ import annotations
 from PySide6.QtCore import (QEasingCurve, QEvent, QPoint, QPointF,
                             QPropertyAnimation, QRect, QRectF, Qt, QTimer)
 from PySide6.QtGui import (QBrush, QColor, QKeySequence, QLinearGradient,
-                           QPainter, QPainterPath, QPen, QPolygonF,
+                           QPainter, QPainterPath, QPen, QPolygonF, QRegion,
                            QShortcut)
 from PySide6.QtWidgets import (QCheckBox, QFrame, QGridLayout, QHBoxLayout,
                                QLineEdit, QScrollArea, QVBoxLayout, QWidget)
@@ -295,6 +295,7 @@ class ModsTreasuryView(QWidget):
         # never visible above it, eclipsed by it below
         wcl.setContentsMargins(t.SP_LG, _HANDLE_H + t.BORDER_W,
                                t.SP_LG, t.SP_MD)
+        wcl.setSpacing(t.SP_MD)
         wcl.addWidget(self._wall_scroll)
         wall_holder = QVBoxLayout()
         wall_holder.setContentsMargins(t.SP_SCREEN, t.SP_LG,
@@ -313,6 +314,7 @@ class ModsTreasuryView(QWidget):
         dl = QVBoxLayout(self._drawer)
         dl.setContentsMargins(t.SP_LG - t.BORDER_W, t.SP_MD - t.BORDER_W,
                               t.SP_LG - t.BORDER_W, t.SP_MD - t.BORDER_W)
+        dl.setSpacing(t.SP_MD)
         dl.addWidget(self._build_dashboard())
         # the handle lives INSIDE the container too: the drawer's bottom
         # lip, riding the wipe edge during the slide (see _ride)
@@ -350,6 +352,7 @@ class ModsTreasuryView(QWidget):
         wrap = panel("app")
         wl = QVBoxLayout(wrap)
         wl.setContentsMargins(t.SP_SCREEN, t.SP_LG, t.SP_SCREEN, 0)
+        wl.setSpacing(t.SP_MD)
         hero = panel("card")
         hl = QVBoxLayout(hero)
         hl.setContentsMargins(t.SP_XL, t.SP_XL, t.SP_XL, t.SP_XL)
@@ -598,6 +601,24 @@ class ModsTreasuryView(QWidget):
         self._handle.setGeometry(r.x(), self._drawer.geometry().bottom() + 1,
                                  r.width(), _HANDLE_H)
         self._handle.raise_()
+        self._clip_to_interior(self._drawer, r)
+        self._clip_to_interior(self._handle, r)
+
+    @staticmethod
+    def _clip_to_interior(w: QWidget, interior: QRect) -> None:
+        """Mask `w` to the part of it inside the card's interior.
+
+        Qt clips a child to its parent's whole rectangle - border included -
+        so a sheet sliding up past the interior's top edge was painted over
+        the card's top border for the length of the slide (and the lip over
+        the bottom border as it left). The mask is in the widget's own
+        coordinates; a widget wholly outside gets a region that shows
+        nothing (an EMPTY region would clear the mask instead)."""
+        seen = w.geometry().intersected(interior)
+        if seen.isEmpty():
+            w.setMask(QRegion(-1, -1, 1, 1))
+        else:
+            w.setMask(QRegion(seen.translated(-w.x(), -w.y())))
 
     def _esc_toggle(self) -> None:
         """Esc rides both ways: closes an open drawer, opens a closed one

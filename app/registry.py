@@ -1,5 +1,5 @@
 """
-registry.py - the catalogue of tools that WF Market Helper can launch.
+registry.py - the catalogue of tools that Warframe Toolbox can launch.
 
 Adding a new tool is a single entry in TOOLS below. The host reads this list
 to build the landing page and to know how to run each tool, so no GUI code has
@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from core import theme
 
 # Everything is anchored to this file's folder so the app works no matter what
 # directory it is launched from.
@@ -55,10 +54,11 @@ class Tool:
     workdir: Path                   # cwd for the subprocess (config lives here)
     flags: list[ToolFlag] = field(default_factory=list)
     args: list[ToolArg] = field(default_factory=list)
-    accent: str = theme.WEB_ACCENT  # card accent - slate by default. NOT the
+    accent: str = "WEB_ACCENT"      # card accent, as a core.theme token NAME
+                                    # (resolved when painted, so it follows
+                                    # the theme) - slate by default. NOT the
                                     # app's gold: filled gold is reserved for
-                                    # money actions, and a tool's Home card
-                                    # renders its accent as a filled button.
+                                    # money actions.
     icon: str = "tool"              # core.theme.ICONS key for the sidebar
                                     # and Home card (default: puzzle piece)
     available: bool = True          # False renders a "coming soon" card
@@ -94,7 +94,7 @@ TOOLS: list[Tool] = [
         ),
         script=TOOLS_DIR / "api_check" / "api_check.py",
         workdir=TOOLS_DIR / "api_check",
-        accent=theme.OK,            # jade, the app's OK status colour
+        accent="OK",                # jade, the app's OK status colour
         icon="network",             # a tower: this tool talks to the API
         requires_session=False,   # runs unauthenticated; uses session if present
     ),

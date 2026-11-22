@@ -3,7 +3,7 @@
 arcane. Prices are fetched through the host's shared MarketClient (the
 host owns the session and talks to WFM directly - the gateway is the road
 for TOOL subprocesses; the client's own rate limiter still applies) and
-cached to `.vosfor_prices.json`, so the ~140 lookups only happen when you
+cached to `vosfor_prices.json`, so the ~140 lookups only happen when you
 ask and persist between sessions.
 """
 
@@ -15,6 +15,7 @@ import threading
 import time
 from pathlib import Path
 
+from core import atomic
 from core import config as wfm_config
 from core import paths
 
@@ -25,7 +26,10 @@ def load_prices() -> dict:
     """{"fetched_at": ts|None, "prices": {name_lower: plat}}."""
     try:
         d = json.loads(PRICE_FILE.read_text(encoding="utf-8"))
-        if isinstance(d, dict) and "prices" in d:
+        # `prices` must BE a dict: {"prices": null} is valid JSON, and the
+        # sweep then failed on every item, reported success and saved null
+        # again - a cache that could never recover.
+        if isinstance(d, dict) and isinstance(d.get("prices"), dict):
             return d
     except (OSError, ValueError):
         pass
@@ -36,18 +40,11 @@ def _save(prices: dict, when: float | None) -> str | None:
     """Persist the sweep. Returns None on success or a printable error -
     never raises: this runs at the END of the worker, and an exception here
     would skip the on_done callback and wedge the UI's fetch state."""
-    tmp = PRICE_FILE.with_suffix(".tmp")
     try:
-        tmp.write_text(json.dumps(
-            {"fetched_at": when, "prices": prices}, indent=1),
-            encoding="utf-8")
-        os.replace(tmp, PRICE_FILE)
+        atomic.write_json(PRICE_FILE, {"fetched_at": when, "prices": prices},
+                          indent=1)
         return None
     except OSError as exc:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
         return f"couldn't save prices: {exc}"
 
 
@@ -60,21 +57,31 @@ def _rank0(row: dict) -> bool:
     return r in (None, 0)
 
 
+def _plat(row: dict) -> int | None:
+    """A row's price as a whole number of platinum, or None. Converted
+    BEFORE comparing (10.9 then 10.5 used to keep 10.9's truncation), and a
+    bool is not a price even though Python calls it an int."""
+    p = row.get("platinum")
+    if isinstance(p, bool) or not isinstance(p, (int, float)):
+        return None
+    return int(p)
+
+
 def _lowest_online_sell(book: dict) -> int | None:
     best = None
     for row in book.get("sell", []):
         if _rank0(row) and row.get("status") in ("ingame", "online"):
-            p = row.get("platinum")
-            if isinstance(p, (int, float)) and (best is None or p < best):
-                best = int(p)
+            p = _plat(row)
+            if p is not None and (best is None or p < best):
+                best = p
     # fall back to the cheapest UNRANKED sell of any status if nobody is online
     if best is None:
         for row in book.get("sell", []):
             if not _rank0(row):
                 continue
-            p = row.get("platinum")
-            if isinstance(p, (int, float)) and (best is None or p < best):
-                best = int(p)
+            p = _plat(row)
+            if p is not None and (best is None or p < best):
+                best = p
     return best
 
 

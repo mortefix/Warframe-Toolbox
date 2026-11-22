@@ -46,11 +46,14 @@ from core import repricer as core_repricer
 from core import theme as t
 from ui import work
 from ui.suggest import SuggestBox
-from ui.widgets import (Dropdown, card_grid, glyph_icon, hairline, label,
-                        panel, plat_icon, plat_label, polarity_icon, restyle)
+from ui.widgets import (Dropdown, button_sheet, card_grid, glyph_icon,
+                        hairline, icon_text, label, panel, plat_icon, plat_label,
+                        polarity_icon, restyle, set_tab_active, tab_button)
 
-ROLE_COLOR = {"ok": t.OK, "warn": t.WARN, "err": t.ERR, "muted": t.WFM_MUTED,
-              "accent": t.ACCENT, "teal": t.WFM_TEAL, "pink": t.WFM_PINK}
+# Token NAMES, read live (theme.TokenMap) - never the colours themselves,
+# which would freeze at import and outlive a theme switch.
+ROLE_COLOR = t.TokenMap(ok="OK", warn="WARN", err="ERR", muted="WFM_MUTED",
+                        accent="ACCENT", teal="WFM_TEAL", pink="WFM_PINK")
 
 CARD_COLUMNS = 2
 ICON_PX = 96
@@ -59,10 +62,11 @@ OFFSET_FIELD_W = 46
 #: side -> (badge background, badge foreground). The one thing SideSpec
 #: deliberately does NOT carry, because which hue means "sell" is a theme
 #: decision, not a rule about orders.
-BADGE = {"sell": (t.WFM_BADGE_BG, t.WFM_BADGE_FG),
-         "buy": (t.WFM_BUY_BG, t.WFM_BUY_FG)}
-TAB_ACCENTS = {"WTS": t.WFM_BADGE_FG, "WTB": t.WFM_BUY_FG,
-               "Saved For Later": t.WFM_GREEN, "Contracts": t.ACCENT}
+BADGE = t.TokenMap(sell=("WFM_BADGE_BG", "WFM_BADGE_FG"),
+                   buy=("WFM_BUY_BG", "WFM_BUY_FG"))
+TAB_ACCENTS = t.TokenMap({"WTS": "WFM_BADGE_FG", "WTB": "WFM_BUY_FG",
+                          "Saved For Later": "WFM_GREEN",
+                          "Contracts": "ACCENT"})
 
 
 def _flat_style(colour: str) -> str:
@@ -73,10 +77,7 @@ def _flat_style(colour: str) -> str:
     a button you cannot press looks exactly like one you can - which is how
     the "-1 on a single unit" button shipped looking live.
     """
-    return (f"QPushButton {{ color: {colour}; background: transparent;"
-            f" border: {t.CTRL_BORDER_W}px solid {colour}; padding: 2px 8px; }}"
-            f"QPushButton:disabled {{ color: {t.BORDER};"
-            f" border-color: {t.BORDER}; }}")
+    return button_sheet(colour, pad=t.BTN_PAD_EDGED, edge=colour)
 
 
 def _flat(text: str, colour: str, tip: str = "",
@@ -91,7 +92,6 @@ def _flat(text: str, colour: str, tip: str = "",
     b = QPushButton(text)
     if icon:
         b.setIcon(glyph_icon(icon, color=colour))
-    b.setProperty("size", "small")
     b.setCursor(Qt.PointingHandCursor)
     b.setStyleSheet(_flat_style(colour))
     if tip:
@@ -99,16 +99,19 @@ def _flat(text: str, colour: str, tip: str = "",
     return b
 
 
-def _placeholder_icon(mark: str = "◍") -> QLabel:
-    """The item-image stand-in the cards share: a big glyph in a bordered black
-    well. The ONE hand-written type-size literal the style guide sanctions lives
-    here, so the order cards and the contract cards can both enlarge their
-    placeholder without a second literal drifting out of sync with this one."""
-    icon = QLabel(mark)
+def _placeholder_icon(key: str = "no_image") -> QLabel:
+    """The item-image stand-in the cards share: a big icon in a bordered black
+    well. `key` is a core.theme.ICONS key - the mark is drawn from the icon
+    face, not typed as a dingbat. The ONE hand-written type-size literal the
+    style guide sanctions lives here, so the order cards and the contract
+    cards can both enlarge their placeholder without a second literal
+    drifting out of sync with this one."""
+    icon = QLabel(t.glyph(key))
+    icon.setProperty("role", "icon")
     icon.setFixedSize(ICON_PX, ICON_PX)
     icon.setAlignment(Qt.AlignCenter)
     icon.setStyleSheet(
-        f"background: {t.ICON_BG}; color: {t.WFM_EDGE};"
+        f"background: {t.ICON_BG}; color: {t.INK_FAINT};"
         f"border: {t.BORDER_W}px solid {t.BORDER}; font-size: 30pt;")
     return icon
 
@@ -434,7 +437,6 @@ class ListingCard(QFrame):
         rp = QPushButton(" Reprice")
         rp.setIcon(glyph_icon("reprice", color=t.INK))
         rp.setProperty("kind", "money")
-        rp.setProperty("size", "small")
         rp.setProperty("compact", "true")   # tighter padding -> compact height
         rp.setCursor(Qt.PointingHandCursor)
         rp.setToolTip("match the best live price, clamped to the limit")
@@ -507,7 +509,7 @@ class ListingCard(QFrame):
 
     def _dot(self) -> QLabel:
         w = label("·", role="small")
-        w.setStyleSheet(f"color: {t.WFM_EDGE};")
+        w.setStyleSheet(f"color: {t.INK_FAINT};")
         return w
 
     def _confirm_state(self, dirty: bool) -> None:
@@ -533,7 +535,7 @@ class ListingCard(QFrame):
         self.name.setText(l.name)
         self.rank.setText(vm.rank_text(l))
         self.rank.setVisible(bool(vm.rank_text(l)))
-        self.qty.setText(f"{l.quantity} ❒")
+        self.qty.setText(f"{l.quantity} {icon_text('stack')}")
         self.price.setText(str(l.platinum))
         colour = t.TEXT if l.visible else t.WARN
         self.vis.setIcon(glyph_icon("visible" if l.visible else "hidden",
@@ -601,7 +603,7 @@ class ListingCard(QFrame):
             return
         beaten = core_repricer.better_than(self.spec.side, l.market_low,
                                            l.platinum)
-        mark = "⚠ " if beaten else ""
+        mark = icon_text("beaten") + " " if beaten else ""
         self.market.setText(
             f"{mark}{self.spec.best_word.capitalize()} = {l.market_low}p")
         self.market.setStyleSheet(f"color: {t.WARN if beaten else t.WFM_MUTED};")
@@ -625,10 +627,8 @@ class ListingCard(QFrame):
     def set_hit(self, hit: bool) -> None:
         """Search highlight: the card's own edge, so the match is visible
         without moving anything or adding a widget that changes the layout."""
-        edge = t.ACCENT if hit else t.BORDER
-        self.setStyleSheet(f"QFrame[surface=\"listing\"] {{"
-                           f" background: {t.WFM_CARD};"
-                           f" border: {t.BORDER_W}px solid {edge}; }}")
+        self.setProperty("hit", "true" if hit else "false")
+        restyle(self)
 
 
 class EditListingDialog(QDialog):
@@ -647,7 +647,7 @@ class EditListingDialog(QDialog):
         self.setModal(True)
         self.setMinimumWidth(t.DIALOG_MIN_W)  # §9: dialogs carry a stable min width
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(t.SP_XL, t.SP_XL, t.SP_XL, t.SP_XL)
+        lay.setContentsMargins(*t.DIALOG_MARGINS)
         lay.setSpacing(t.SP_MD)
 
         head = QHBoxLayout()
@@ -780,7 +780,7 @@ class EditListingDialog(QDialog):
             lambda: self.tab.client.update_order(oid, price, qty, visible,
                                                  rank),
             lambda _r: self._done(price, qty, visible, limit, rank),
-            self._failed)
+            self._failed, owner=self)
 
     def _failed(self, msg: str) -> None:
         self.save.setEnabled(True)
@@ -902,7 +902,6 @@ class ListingsTab(QWidget):
         self.sort.currentTextChanged.connect(self._sort_changed)
         ctl.addWidget(self.sort)
         self.order_btn = QPushButton()
-        self.order_btn.setProperty("size", "small")
         self.order_btn.setMinimumWidth(96)
         self.order_btn.setToolTip("click to reverse the order")
         self.order_btn.clicked.connect(self._flip_order)
@@ -1286,7 +1285,7 @@ class ListingsTab(QWidget):
             name = failed.listing.name if failed is not None else "this order"
             QMessageBox.warning(self, name, msg)
 
-        self._jobs.append(work.run(fn, ok, bad))
+        self._jobs.append(work.run(fn, ok, bad, owner=self))
 
     def _sold(self, oid: str) -> None:
         card = self.cards.get(oid)
@@ -1441,7 +1440,7 @@ class ListingsTab(QWidget):
             self.apply_view()
 
         self._jobs.append(work.run_stepped(body, each, finished,
-                                           self.set_failed))
+                                           self.set_failed, owner=self))
 
     def _reprice_one(self, oid: str) -> None:
         card = self.cards.get(oid)
@@ -1534,7 +1533,7 @@ class ListingsTab(QWidget):
                 self._set_busy(False, "Reprice all done.")
 
         self._jobs.append(work.run_stepped(body, each, finished,
-                                           self.set_failed))
+                                           self.set_failed, owner=self))
 
 
 class SavedTab(QWidget):
@@ -1787,7 +1786,7 @@ class SavedTab(QWidget):
             name = fresh.listing.name if fresh is not None else "this order"
             QMessageBox.warning(self, name, msg)
 
-        self._jobs.append(work.run(fn, ok, bad))
+        self._jobs.append(work.run(fn, ok, bad, owner=self))
 
     def _commit_target(self, oid: str) -> None:
         card = self.cards.get(oid)
@@ -1827,7 +1826,7 @@ class SavedTab(QWidget):
             QMessageBox.warning(self, name, msg)
 
         self._jobs.append(work.run(
-            fn, lambda _msg: self.view.drop_archived(oid), bad))
+            fn, lambda _msg: self.view.drop_archived(oid), bad, owner=self))
 
     # -- sweep -----------------------------------------------------------
 
@@ -1915,10 +1914,13 @@ class CenteredNotice(QWidget):
         super().__init__()
         self.setAttribute(Qt.WA_StyledBackground, True)
         lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(t.SP_MD)
         lay.addStretch(1)
         box = panel("card")
         bl = QVBoxLayout(box)
         bl.setContentsMargins(t.SP_XL, t.SP_XL, t.SP_XL, t.SP_XL)
+        bl.setSpacing(t.SP_MD)
         self._title = label(title, role="h2")
         self._title.setAlignment(Qt.AlignCenter)
         bl.addWidget(self._title)
@@ -1974,12 +1976,7 @@ class ContractCard(QFrame):
         kind = row.get("kind", "riven")
         weapon = row.get("weapon", "")
         visible = bool(row.get("visible", True))
-        # `surface="listing"` alone paints nothing (qss.py carries no rule for
-        # it - the WTS card draws its own edge in set_hit). State the card's
-        # fill and border here the same way, or it reads as a naked layout.
-        self.setStyleSheet(f"QFrame[surface=\"listing\"] {{"
-                           f" background: {t.WFM_CARD};"
-                           f" border: {t.BORDER_W}px solid {t.BORDER}; }}")
+        # (the card's fill and border are the surface="listing" rule in qss.py)
         # Half a page must MEAN half a page. A non-wrapping QLabel reports its
         # whole text as minimum width, so one long stat line would inflate
         # this card's minimum past its grid column - and with the horizontal
@@ -1998,7 +1995,7 @@ class ContractCard(QFrame):
         #    Only the 96px picture shares a row with the stats, so the two
         #    never fight for width; the title, price and polarity each get
         #    the card's full width on their own rows below.
-        self.icon = _placeholder_icon("◈")
+        self.icon = _placeholder_icon("contract")
         grid.addWidget(self.icon, 0, 0, Qt.AlignLeft | Qt.AlignTop)
 
         # title: kind badge · weapon (teal) · riven name (gold) · rank ·
@@ -2054,7 +2051,7 @@ class ContractCard(QFrame):
         self.pol_icon = None
         if sub:
             dot = label("·", role="small")
-            dot.setStyleSheet(f"color: {t.WFM_EDGE};")
+            dot.setStyleSheet(f"color: {t.INK_FAINT};")
             info.addWidget(dot, 0, mid)
             sub_lbl = label(str(sub).title(), role="small")
             sub_lbl.setStyleSheet(f"color: {t.WFM_MUTED};")
@@ -2151,7 +2148,7 @@ class EditContractDialog(QDialog):
         self.setModal(True)
         self.setMinimumWidth(t.DIALOG_MIN_W)  # §9: dialogs carry a stable min width
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(t.SP_XL, t.SP_XL, t.SP_XL, t.SP_XL)
+        lay.setContentsMargins(*t.DIALOG_MARGINS)
         lay.setSpacing(t.SP_MD)
 
         head = QHBoxLayout()
@@ -2524,7 +2521,6 @@ class ListingsView(QWidget):
         head.addSpacing(t.SP_LG)
         self.refresh_btn = QPushButton(" Refresh Listings")
         self.refresh_btn.setIcon(glyph_icon("refresh", color=t.TEXT))
-        self.refresh_btn.setProperty("size", "small")
         self.refresh_btn.setCursor(Qt.PointingHandCursor)
         self.refresh_btn.clicked.connect(self.refresh)
         head.addWidget(self.refresh_btn, 0, Qt.AlignVCenter)
@@ -2546,9 +2542,7 @@ class ListingsView(QWidget):
         bar.setSpacing(0)
         self.tab_btns = {}
         for name in self.TAB_NAMES:
-            b = QPushButton(name)
-            b.setProperty("kind", "flat")
-            b.setCursor(Qt.PointingHandCursor)
+            b = tab_button(name, TAB_ACCENTS.token(name))
             b.clicked.connect(lambda _c=False, n=name: self.select(n))
             self.tab_btns[name] = b
             bar.addWidget(b, 1)
@@ -2583,13 +2577,7 @@ class ListingsView(QWidget):
         self.current = name
         self.stack.setCurrentWidget(self.tabs[name])
         for k, b in self.tab_btns.items():
-            active = k == name
-            b.setStyleSheet(
-                f"color: {t.TEXT if active else t.MUTED};"
-                f"border-bottom: {t.BORDER_W}px solid "
-                f"{TAB_ACCENTS[k] if active else t.BORDER};"
-                f"background: {t.TAB_BG if active else t.PANEL};"
-                "padding: 6px 18px;")
+            set_tab_active(b, k == name)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)

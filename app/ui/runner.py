@@ -43,10 +43,12 @@ class RunnerView(QWidget):
 
         head = QHBoxLayout()
         head.setSpacing(t.SP_SM)
-        mark = label(t.glyph(tool.icon), role="icon")
-        mark.setStyleSheet(f"color: {tool.accent};")
-        head.addWidget(mark)
+        # title FIRST, so it starts at the same x as every other screen's; the
+        # tool's accent icon trails it
         head.addWidget(label(tool.name, role="h1"))
+        mark = label(t.glyph(tool.icon), role="icon")
+        mark.setStyleSheet(f"color: {t.color(tool.accent)};")
+        head.addWidget(mark)
         head.addStretch(1)
         if tool.requires_session:
             linked = shell.session is not None
@@ -95,7 +97,6 @@ class RunnerView(QWidget):
         self.run_btn.clicked.connect(self.run)
         rail.addWidget(self.run_btn)
         self.stop_btn = QPushButton("Stop")
-        self.stop_btn.setProperty("size", "small")
         self.stop_btn.setEnabled(False)
         self.stop_btn.clicked.connect(self.stop)
         rail.addWidget(self.stop_btn)

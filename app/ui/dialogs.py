@@ -122,7 +122,7 @@ class LoginDialog(QDialog):
         self.setMinimumWidth(t.DIALOG_MIN_W)
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(t.SP_XL, t.SP_XL, t.SP_XL, t.SP_XL)
+        lay.setContentsMargins(*t.DIALOG_MARGINS)
         lay.setSpacing(t.SP_MD)
         lay.addWidget(label("Link your warframe.market account", role="h2"))
         blurb = label("Credentials are sent only to api.warframe.market. "

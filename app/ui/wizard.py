@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (QDialog, QHBoxLayout, QPushButton,
 from core import onboarding
 from core import theme as t
 from ui.dialogs import LoginForm
-from ui.widgets import hairline, label
+from ui.widgets import hairline, label, restyle
 
 #: page indices, in visit order
 WELCOME, PROFILE, MARKET, DATA = range(4)
@@ -39,13 +39,14 @@ class WelcomeWizard(QDialog):
         self._adopt_session = adopt_session
         self._set_account_id = set_account_id
         self._capture = None            # built on first entry to PROFILE
+        self._profile_done = False      # an account ID was captured this run
 
         self.setWindowTitle("Warframe Toolbox setup")
         self.setModal(True)
         self.resize(760, 640)
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(t.SP_XL, t.SP_XL, t.SP_XL, t.SP_XL)
+        lay.setContentsMargins(*t.DIALOG_MARGINS)
         lay.setSpacing(t.SP_MD)
 
         self.stack = QStackedWidget(self)
@@ -60,6 +61,10 @@ class WelcomeWizard(QDialog):
         self.back_btn = QPushButton("Back")
         self.back_btn.clicked.connect(self._back)
         rail.addWidget(self.back_btn)
+        # bottom left: the step's success line, in the OK colour. Empty until
+        # the step on screen has actually succeeded (see _sync_rail).
+        self.done_note = label("", role="small", level="ok")
+        rail.addWidget(self.done_note)
         rail.addStretch(1)
         self.skip_btn = QPushButton("Skip")
         self.skip_btn.clicked.connect(self._advance)
@@ -78,6 +83,10 @@ class WelcomeWizard(QDialog):
     def _page_welcome(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
+        # no inset of its own: the dialog's margin already frames the page,
+        # and Qt's default here (11px) pushed every page's text out of line
+        # with the hairline and the button rail below it
+        lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(t.SP_MD)
         lay.addWidget(label(onboarding.WELCOME_TITLE, role="h1"))
         body = label(onboarding.WELCOME_BODY, role="body")
@@ -89,6 +98,10 @@ class WelcomeWizard(QDialog):
     def _page_profile(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
+        # no inset of its own: the dialog's margin already frames the page,
+        # and Qt's default here (11px) pushed every page's text out of line
+        # with the hairline and the button rail below it
+        lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(t.SP_MD)
         lay.addWidget(label(onboarding.PROFILE_TITLE, role="h2"))
         body = label(onboarding.PROFILE_BODY, role="muted")
@@ -104,6 +117,10 @@ class WelcomeWizard(QDialog):
     def _page_market(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
+        # no inset of its own: the dialog's margin already frames the page,
+        # and Qt's default here (11px) pushed every page's text out of line
+        # with the hairline and the button rail below it
+        lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(t.SP_MD)
         lay.addWidget(label(onboarding.MARKET_TITLE, role="h2"))
         body = label(onboarding.MARKET_BODY, role="muted")
@@ -120,6 +137,10 @@ class WelcomeWizard(QDialog):
     def _page_data(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
+        # no inset of its own: the dialog's margin already frames the page,
+        # and Qt's default here (11px) pushed every page's text out of line
+        # with the hairline and the button rail below it
+        lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(t.SP_MD)
         lay.addWidget(label(onboarding.DATA_TITLE, role="h2"))
         body = label(onboarding.DATA_BODY, role="muted")
@@ -162,8 +183,13 @@ class WelcomeWizard(QDialog):
         self._sync_rail()
 
     def _leave(self, index: int) -> None:
-        if index == PROFILE and self._capture is not None:
-            self._capture.stop()
+        # The profile capture keeps polling after its page is left. The ID
+        # arrives a few seconds after the site shows you as signed in (one
+        # poll starts the request, a later one reads the answer), and stopping
+        # here meant that pressing Next in that gap lost it for good: the
+        # wizard finished with a signed-in browser and no account ID. It stops
+        # when it has the ID, or when the wizard closes (accept / reject).
+        pass
 
     def _enter(self, index: int) -> None:
         if index == PROFILE:
@@ -178,6 +204,25 @@ class WelcomeWizard(QDialog):
         self.back_btn.setVisible(index > WELCOME)
         self.skip_btn.setVisible(index in (PROFILE, MARKET))
         self.next_btn.setText("Finish" if index == DATA else "Next")
+        done = ""
+        if index == PROFILE and self._profile_done:
+            done = onboarding.PROFILE_SUCCESS
+        elif index == MARKET and self._get_session() is not None:
+            done = onboarding.MARKET_SUCCESS.format(
+                name=self._get_session().username)
+        waiting = ""
+        polling = self._capture is not None and self._capture.view is not None
+        if index == PROFILE and not done and polling:
+            waiting = onboarding.PROFILE_WAITING
+        self.done_note.setText(done or waiting)
+        # green only for a success; the "still waiting" hint is plain
+        level = "ok" if done else ""
+        if self.done_note.property("level") != level:
+            self.done_note.setProperty("level", level)
+            restyle(self.done_note)
+        # nothing left to skip once the step has succeeded
+        if done:
+            self.skip_btn.setVisible(False)
 
     def reject(self) -> None:
         if self._capture is not None:
@@ -207,6 +252,8 @@ class WelcomeWizard(QDialog):
     def _profile_captured(self, aid: str) -> None:
         self._set_account_id(aid)
         self.profile_note.setText(onboarding.PROFILE_DONE)
+        self._profile_done = True
+        self._sync_rail()
 
     def _sync_market(self) -> None:
         sess = self._get_session()
@@ -219,6 +266,7 @@ class WelcomeWizard(QDialog):
     def _market_linked(self, session) -> None:
         self._adopt_session(session)
         self._sync_market()
+        self._sync_rail()
 
     def _refresh_data(self) -> None:
         s = onboarding.detect()

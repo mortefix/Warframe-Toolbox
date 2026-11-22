@@ -76,6 +76,18 @@ def is_portable() -> bool:
     return USERDATA == _PORTABLE
 
 
+def is_installed() -> bool:
+    """True when this copy is the one the installer put down: the clone is
+    named app-repo and sits beside Inno Setup's uninstaller. A dev clone or a
+    copied folder is never "installed", whatever data root it uses."""
+    if ROOT.name.lower() != "app-repo":
+        return False
+    try:
+        return any(ROOT.parent.glob("unins*.exe"))
+    except OSError:
+        return False
+
+
 def ensure_dirs() -> None:
     """Create the data root. Called by the launcher, never at import."""
     USERDATA.mkdir(parents=True, exist_ok=True)

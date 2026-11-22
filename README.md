@@ -1,5 +1,5 @@
 ### Notice:
-this aplication is in beta and not yet complete. there are currently issues with account linking for Warframe.Market I discovered on Monday August 10th, 2026. this will be patched soon and I will add an on boarding wizard before pushing the next release. feel free to download this app and take a look at it. Account linking is functional for your Warframe account (this function is owned by Digital Extremes and your account credentials cannot be seen by me), Local game data, and reading AlecaFrame's data. both Warframe Toolbox and AlecaFrame must be running in the background and you must complete at least one mission in game for this data to be captured by Warframe Toolbox.
+this aplication is in beta and not yet complete. the app now has a first-launch setup wizard that walks you through connecting your accounts. feel free to download this app and take a look at it. Account linking is functional for your Warframe account (this function is owned by Digital Extremes and your account credentials cannot be seen by me), Local game data, and reading AlecaFrame's data. both Warframe Toolbox and AlecaFrame must be running in the background and you must complete at least one mission in game for this data to be captured by Warframe Toolbox.
 
 # Warframe Toolbox
 
@@ -14,8 +14,13 @@ Windows-first. Your warframe.market password is used for a single sign-in and
 ## Install
 
 Download **`Install Warframe Toolbox.exe`** and run it. It installs per-user (no
-admin), sets up anything it needs, and creates the shortcuts you choose. First
-launch, click **Link account** and sign in once.
+admin), sets up anything it needs, and creates the shortcuts you choose. On
+first launch a short setup wizard connects your Warframe.com profile, links
+your warframe.market account, and checks for AlecaFrame data. Every step can
+be skipped, and you can run it again from **Settings › Data**.
+
+Setup also offers to open the Toolbox automatically whenever Warframe starts.
+It is ticked by default; untick it there, or change it later in **Settings**.
 
 The app **updates itself on launch**, so you always have the latest version — no
 reinstalling.
@@ -30,8 +35,8 @@ Pick an app from the sidebar. Nothing loads until you open it.
 - **My Listings** — your warframe.market sell (WTS) and buy (WTB) orders as a
   dashboard. See when you've been undercut or outbid, and **Reprice** to match
   the best online price in one click (never below a floor you set, never
-  overbidding). Mark items **Sold**, edit price/quantity/visibility, or bulk
-  show/hide.
+  overbidding). Mark items **Sold**, edit price/quantity/visibility, bulk
+  show/hide, or park a listing in **Saved For Later**.
 - **Market** — a read-only browser of warframe.market: search any tradeable
   item and see the live order book (sellers cheapest-first, buyers highest,
   with online/in-game status), browse **Contracts** (riven & lich auctions),
@@ -42,6 +47,8 @@ Pick an app from the sidebar. Nothing loads until you open it.
   spend where, and can weight the plan by how easily each arcane is farmed or
   how cheap it is to just buy on the market. It reads which arcanes you own
   from AlecaFrame (or you tick them off by hand).
+- **Mods** — a collection tracker for your mods: progress by weapon category,
+  mod set, and named collection, with each mod shown as a card.
 - **Wiki · Overframe** — the Warframe Wiki and Overframe.gg embedded right in
   the app, with a built-in **ad blocker** on by default. Item names throughout
   the app link straight into the Wiki tab.
@@ -79,7 +86,7 @@ of it from **Settings › Data › WF Toolbox**.
   **launch on Windows startup**, **launch the Toolbox when Warframe starts**, and
   **send to tray when minimized**.
 - **Market › Messaging** — edit the trade-whisper templates the ✉ button copies.
-- **Data › WebView** — toggle the ad blocker and clear the embedded browser's
+- **Data › Web apps** — toggle the ad blocker and clear the embedded browser's
   cache or cookies.
 - **Data › WF Toolbox** — see every file the app has saved about you, delete
   cached item images, or **Delete ALL user data** (both wipes ask you to type

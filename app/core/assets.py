@@ -3,9 +3,9 @@ core/assets.py - embedded binary assets (base64), so the app stays a single
 self-contained tree with no loose image files to ship or lose.
 
 PLATINUM_PNG_B64 is warframe.market's platinum icon, downscaled to a 64x55
-RGBA master. The GUI decodes it once into a Tk PhotoImage and derives smaller
-copies by integer subsampling, which Tkinter required. Kept here as
-base64 rather than a .png so PyInstaller one-file builds need no data files.
+RGBA master. The GUI decodes it once and scales copies from that. Kept here
+as base64 rather than a .png so PyInstaller one-file builds need no data
+files.
 """
 
 from __future__ import annotations

@@ -30,7 +30,12 @@ _SAFE = re.compile(r"[^A-Za-z0-9._-]")
 def _local(filename: str) -> Path:
     # wiki filenames are already flat ("XMod.png"), but never trust a path
     # component from data - flatten anything else defensively
-    return config.MOD_IMG_CACHE / _SAFE.sub("_", filename)
+    # (and a name that is ONLY dots - "." / ".." - is a directory reference,
+    # not a file: it would resolve to the cache folder or its parent)
+    safe = _SAFE.sub("_", filename)
+    if not safe.strip("."):
+        safe = "_" * max(len(safe), 1)
+    return config.MOD_IMG_CACHE / safe
 
 
 def cached(filename: str | None) -> Path | None:
@@ -50,7 +55,6 @@ def fetch(filename: str | None, timeout: int = 20) -> Path | None:
     hit = cached(filename)
     if hit is not None:
         return hit
-    config.MOD_IMG_CACHE.mkdir(parents=True, exist_ok=True)
     try:
         r = requests.get(BASE + quote(filename), timeout=timeout,
                          headers={"User-Agent": USER_AGENT})
@@ -59,7 +63,17 @@ def fetch(filename: str | None, timeout: int = 20) -> Path | None:
     except requests.RequestException:
         return None
     p = _local(filename)
-    tmp = p.with_suffix(p.suffix + ".tmp")
-    tmp.write_bytes(r.content)
-    tmp.replace(p)
+    tmp = p.with_name(p.name + ".tmp")
+    # "the local path or None" covers the disk too: a full drive or a locked
+    # file is a missing image, not an exception out of a worker.
+    try:
+        config.MOD_IMG_CACHE.mkdir(parents=True, exist_ok=True)
+        tmp.write_bytes(r.content)
+        tmp.replace(p)
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return None
     return p

@@ -52,7 +52,8 @@ from core import bookmarks as core_bookmarks
 from core import theme as t
 from core import webapps
 from ui.overlay import SlideOver
-from ui.widgets import bookmark_icon, glyph_icon, hairline, label, panel
+from ui.widgets import (bookmark_icon, button_sheet, glyph_icon, hairline,
+                        label, panel)
 
 #: The browser profile. A Chromium profile directory is LOCKED to one process:
 #: a second process using it gets "Unable to move the cache: Access is denied",
@@ -292,15 +293,11 @@ class BookmarkDrawer(SlideOver):
         foot.setContentsMargins(t.SP_LG, t.SP_SM, t.SP_LG, t.SP_MD)
         self.clear_btn = QPushButton(" Delete all")
         self.clear_btn.setIcon(glyph_icon("delete", color=t.WFM_RED))
-        self.clear_btn.setProperty("size", "small")
         self.clear_btn.setCursor(Qt.PointingHandCursor)
         self.clear_btn.setToolTip(
             f"remove every saved {app.label} page - other apps are untouched")
-        self.clear_btn.setStyleSheet(
-            f"QPushButton {{ color: {t.WFM_RED}; background: transparent;"
-            f" border: {t.CTRL_BORDER_W}px solid {t.BORDER}; padding: 3px 10px; }}"
-            f"QPushButton:hover {{ border-color: {t.WFM_RED}; }}"
-            f"QPushButton:disabled {{ color: {t.WFM_EDGE}; }}")
+        self.clear_btn.setStyleSheet(button_sheet(
+            t.WFM_RED, pad=t.BTN_PAD_EDGED, edge=t.WFM_RED))
         self.clear_btn.clicked.connect(self._clear_all)
         foot.addWidget(self.clear_btn)
         foot.addStretch(1)
@@ -352,14 +349,15 @@ class BookmarkDrawer(SlideOver):
     def _row(self, entry: dict) -> QWidget:
         row = panel()
         h = QHBoxLayout(row)
-        h.setContentsMargins(t.SP_SM, 2, 2, 2)
+        h.setContentsMargins(t.SP_SM, t.SP_XXS, t.SP_XXS, t.SP_XXS)
         h.setSpacing(t.SP_SM)
         link = QPushButton(core_bookmarks.label(entry))
         link.setProperty("kind", "flat")
         link.setCursor(Qt.PointingHandCursor)
         link.setToolTip(entry["url"])
-        link.setStyleSheet(f"text-align: left; color: {t.WFM_TEAL};"
-                           f"padding: 5px 4px;")
+        link.setStyleSheet(button_sheet(
+            t.WFM_TEAL, pad="5px 4px", align="left",
+            hover_bg="transparent", hover_fg=t.TEXT))
         link.clicked.connect(lambda _c=False, u=entry["url"]: self.on_open(u))
         h.addWidget(link, 1)
         rm = QPushButton(glyph_icon("close", color=t.WFM_RED), "")
@@ -435,12 +433,10 @@ class WebAppView(QWidget):
         # different KIND of control and should not read as one more arrow.
         self.list_btn = QPushButton(" Bookmarks")
         self.list_btn.setIcon(glyph_icon(BOOKMARKS_GLYPH, color=t.TEXT))
-        self.list_btn.setProperty("size", "small")
         self.list_btn.setCursor(Qt.PointingHandCursor)
         self.list_btn.setToolTip(f"saved {app.label} pages")
-        self.list_btn.setStyleSheet(
-            f"color: {t.TEXT}; background: {t.PANEL};"
-            f"border: {t.CTRL_BORDER_W}px solid {t.BORDER}; padding: 3px 12px;")
+        self.list_btn.setStyleSheet(button_sheet(
+            t.TEXT, pad=t.BTN_PAD_EDGED, bg=t.PANEL, edge=t.BORDER))
         self.list_btn.clicked.connect(self._toggle_drawer)
         bl.addWidget(self.list_btn)
         lay.addWidget(bar)

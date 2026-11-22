@@ -16,8 +16,9 @@ from __future__ import annotations
 from typing import Callable, Iterable, NamedTuple, Sequence
 
 # Sort keys for the header dropdown. Market data arrives asynchronously, so
-# "Market best" sorts whatever is known at the time - the `is None` leading
-# element pushes unknowns to the end regardless of direction.
+# "Market best" sorts whatever is known at the time. Its `is None` leading
+# element puts unknowns last ascending; arrange() keeps them last descending
+# too (a plain reverse would float every not-yet-priced row to the top).
 SORTS: dict[str, Callable] = {
     "Name": lambda l: l.name.lower(),
     "Price": lambda l: l.platinum,
@@ -31,10 +32,10 @@ SORTS: dict[str, Callable] = {
 #: control says what the resulting order actually IS and the question cannot
 #: come up.
 SORT_WORDS: dict[str, tuple[str, str]] = {
-    "Name":        ("A → Z", "Z → A"),
-    "Price":       ("low → high", "high → low"),
-    "Quantity":    ("few → many", "many → few"),
-    "Market best": ("low → high", "high → low"),
+    "Name":        ("A to Z", "Z to A"),
+    "Price":       ("low to high", "high to low"),
+    "Quantity":    ("few to many", "many to few"),
+    "Market best": ("low to high", "high to low"),
 }
 
 
@@ -92,9 +93,16 @@ def visible_filter(listings: Iterable, mode: str) -> list:
 
 def arrange(listings: Iterable, mode: str, sort_name: str,
             desc: bool = False) -> list:
-    """Filter then sort - the full pipeline behind one render."""
-    return sorted(visible_filter(listings, mode), key=SORTS[sort_name],
-                  reverse=desc)
+    """Filter then sort - the full pipeline behind one render. Rows with no
+    market price yet stay at the END of a "Market best" sort in BOTH
+    directions."""
+    rows = visible_filter(listings, mode)
+    if sort_name == "Market best":
+        known = [l for l in rows if l.market_low is not None]
+        unknown = [l for l in rows if l.market_low is None]
+        return sorted(known, key=lambda l: l.market_low,
+                      reverse=desc) + unknown
+    return sorted(rows, key=SORTS[sort_name], reverse=desc)
 
 
 # -- search ------------------------------------------------------------------

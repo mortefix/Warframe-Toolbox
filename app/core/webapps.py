@@ -14,10 +14,10 @@ from . import theme
 
 
 class WebApp(NamedTuple):
-    key: str        # nav key, also the WebHost window key
+    key: str        # nav key
     label: str      # sidebar text
     icon: str       # core.theme.ICONS key for the sidebar
-    url: str        # home page, loaded on first visit (never at launch)
+    url: str        # home page (preloaded hidden just after launch)
 
 
 # These render the live site in a browser pane inside the content area.

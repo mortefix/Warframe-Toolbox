@@ -151,7 +151,8 @@ class Card(QFrame):
         # the accent identifies the card; it rides here and on the icon only
         stripe = QFrame()
         stripe.setFixedHeight(3)
-        stripe.setStyleSheet(f"background: {card.accent}; border: none;")
+        accent = t.color(card.accent)
+        stripe.setStyleSheet(f"background: {accent}; border: none;")
         lay.addWidget(stripe)
         lay.addSpacing(t.SP_LG)
 
@@ -160,7 +161,7 @@ class Card(QFrame):
         head = QHBoxLayout()
         head.setSpacing(t.SP_MD)
         icon = label(t.glyph(card.icon), role="icon")
-        icon.setStyleSheet(f"color: {card.accent}; background: transparent;")
+        icon.setStyleSheet(f"color: {accent}; background: transparent;")
         head.addWidget(icon, 0, Qt.AlignVCenter)
         head.addWidget(label(card.name, role="h1"))
         head.addStretch(1)
@@ -168,7 +169,7 @@ class Card(QFrame):
         lay.addSpacing(t.SP_LG)
 
         # media band (Element 5): strict 16:9, full card width
-        self.media = AspectMedia(card.icon, card.accent)
+        self.media = AspectMedia(card.icon, accent)
         lay.addWidget(self.media)
         lay.addSpacing(t.SP_LG)
 
@@ -193,7 +194,10 @@ class Card(QFrame):
         btn = QPushButton(action.label)
         btn.setEnabled(action.enabled)
         btn.setProperty("wide", "true")
-        btn.setProperty("size", "small")
+        if action.kind == "open":
+            # the "go" arrow, as an icon AFTER the label (it was a typed "→")
+            btn.setIcon(glyph_icon("forward", color=t.TEXT))
+            btn.setLayoutDirection(Qt.RightToLeft)
         if self._cmd:
             btn.setCursor(Qt.PointingHandCursor)
             btn.clicked.connect(self._cmd)
@@ -235,7 +239,7 @@ class HomeView(QWidget):
         frame = QWidget()
         frame.setAttribute(Qt.WA_StyledBackground, True)
         fl = QVBoxLayout(frame)
-        fl.setContentsMargins(t.SP_SCREEN, t.SP_XL, t.SP_SCREEN, t.SP_XL)
+        fl.setContentsMargins(*t.PAGE_MARGINS)
         fl.setSpacing(t.SP_XL)
         # title row: the app name with the self-update outcome trailing to its
         # right - one quiet line, hidden until set_update_note fills it

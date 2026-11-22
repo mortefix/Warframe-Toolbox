@@ -380,6 +380,10 @@ def rivens() -> list[dict]:
             fp = json.loads(x.get("UpgradeFingerprint") or "{}")
         except (TypeError, ValueError):
             fp = {}
+        if not fp.get("compat") and not fp.get("buffs"):
+            # no weapon and no stats: still veiled (or a raw entry) - the
+            # docstring's exclusion, which nothing actually enforced
+            continue
         weapon = _weapon_name(str(fp.get("compat", ""))) if fp.get("compat") \
             else family
         buffs = [_stat_words(str(b.get("Tag", ""))) for b in

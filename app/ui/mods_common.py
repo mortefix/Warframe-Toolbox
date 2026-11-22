@@ -273,4 +273,4 @@ def warm_images(owner: QWidget, rows: list[dict], done) -> None:
             mod_images.fetch(name)
         return True
 
-    owner._img_job = work.run(body, lambda _ok: done())
+    owner._img_job = work.run(body, lambda _ok: done(), owner=owner)

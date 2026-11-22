@@ -2,9 +2,14 @@
 
 Opens warframe.com in an embedded browser (the app's shared web profile, so the
 login persists exactly as it does in the Wiki/Overframe tabs). While you are
-signed in, a tiny script asks the site's OWN same-origin endpoint,
-/api/user-data, for your account id - the same request the website makes about
-itself - and we lift the 24-hex id out of the JSON.
+signed in, the site keeps a small `user-info` cookie for its own pages to read
+(display name, mastery rank, and `user_id`); a tiny script reads that cookie
+and we lift the 24-hex id out of its JSON.
+
+(Until late 2026 the id came from the site's /api/user-data endpoint. That
+endpoint now answers 404 even when signed in - measured 2026-11-22 - so the
+capture silently never fired: the wizard sat on a signed-in page for ever.
+The old request is kept as a fallback, in case it returns.)
 
 No password ever reaches the app: the embedded browser holds the session cookie,
 the app only reads the resulting id. This is the automatic path; Settings also
@@ -24,16 +29,22 @@ from PySide6.QtCore import QTimer, QUrl, Signal
 from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QPushButton,
                                QVBoxLayout, QWidget)
 
+from core import theme as t
 from core import wf_profile
 
 LOGIN_URL = "https://www.warframe.com/login"
 
-#: Same-origin fetch of the site's own account endpoint. Returns:
-#:   '__WAIT__'  the fetch is still in flight (or not started this document)
-#:   '__ERR__'   the endpoint refused us (not signed in) or the fetch threw
-#:   <text>      the response body (JSON when signed in; HTML if redirected)
+#: Read the signed-in site's own `user-info` cookie; fall back to a same-origin
+#: fetch of the old account endpoint. Returns:
+#:   <text>      the cookie's JSON, or the endpoint's response body
+#:   '__WAIT__'  no cookie, and the fallback fetch is still in flight
+#:   '__ERR__'   no cookie, and the endpoint refused us or the fetch threw
 _PROBE_JS = """
 (function () {
+  var m = document.cookie.match(/(?:^|;\\s*)user-info=([^;]*)/);
+  if (m) {
+    try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+  }
   if (typeof window.__wfCap === 'undefined') {
     window.__wfCap = null;
     fetch('/api/user-data', {credentials: 'include'})
@@ -46,7 +57,9 @@ _PROBE_JS = """
 })();
 """
 
-_POLL_MS = 1500
+#: One poll starts the request and a later one reads the answer, so the ID
+#: lands two polls after sign-in at best. 1500 ms made that a 3-second wait.
+_POLL_MS = 700
 
 
 class WarframeCaptureWidget(QWidget):
@@ -63,6 +76,7 @@ class WarframeCaptureWidget(QWidget):
         self.view = None
         self._lay = QVBoxLayout(self)
         self._lay.setContentsMargins(0, 0, 0, 0)
+        self._lay.setSpacing(t.SP_MD)
         self._timer = QTimer(self)
         self._timer.setInterval(_POLL_MS)
         self._timer.timeout.connect(self._probe)
@@ -132,6 +146,8 @@ class ConnectWarframeDialog(QDialog):
         self.setWindowTitle("Connect Warframe.com")
         self.resize(780, 760)
         lay = QVBoxLayout(self)
+        lay.setContentsMargins(*t.DIALOG_MARGINS)
+        lay.setSpacing(t.SP_MD)
 
         self.status = QLabel(
             "Sign in to Warframe.com below. Your account ID is captured "

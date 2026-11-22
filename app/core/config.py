@@ -17,6 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from core import atomic
 from core import paths
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,7 +49,7 @@ DEFAULTS = {
     "adblock": True,               # block ads/trackers in the web apps
     "theme": "Orokin Dark",        # colour palette: "Orokin Dark" / "Orokin Light"
     # Digital Extremes account identity for the public profile API
-    # (getProfileViewingData). Captured once from warframe.com/api/user-data or
+    # (getProfileViewingData). Captured once from the signed-in warframe.com site or
     # pasted in Settings; empty until then, and the app falls back to AlecaFrame
     # for mastery rank while it is empty. NOT the warframe.market id.
     "wf_account_id": "",           # 24-hex DE ObjectId
@@ -87,10 +88,10 @@ def save_settings(settings: dict) -> None:
     """Written via a temp file and swapped into place. Settings are saved on
     every keystroke-ish change, so a crash or a full disk mid-write would
     otherwise leave a truncated JSON file - which `load_settings` reads as
-    "no settings at all" and silently replaces with defaults."""
-    tmp = SETTINGS_PATH.with_suffix(".tmp")
-    tmp.write_text(json.dumps(settings, indent=2), encoding="utf-8")
-    os.replace(tmp, SETTINGS_PATH)
+    "no settings at all" and silently replaces with defaults. core.atomic
+    gives each writer its own temp name, so two overlapping saves cannot
+    interleave into one garbage file either."""
+    atomic.write_json(SETTINGS_PATH, settings)
 
 
 # ---- user data registry -------------------------------------------------------
@@ -98,6 +99,10 @@ def save_settings(settings: dict) -> None:
 CACHE_DIR = paths.USERDATA / "cache"
 THUMB_CACHE = CACHE_DIR / "thumbs"
 MOD_IMG_CACHE = CACHE_DIR / "mod_images"   # wiki mod-card art (core.mod_images)
+BADGE_CACHE = paths.USERDATA / "mastery_badges"   # wiki rank art (core.mastery)
+
+#: Every downloaded-image folder: sized and wiped as one group.
+IMAGE_CACHES = (THUMB_CACHE, MOD_IMG_CACHE, BADGE_CACHE)
 
 #: The collected-game-data store (owned by core.store; the path is duplicated
 #: here, like THUMB_CACHE, so the Settings > Data page can size and wipe the
@@ -125,6 +130,10 @@ USER_FILES: list[tuple[str, str]] = [
     # worse than no wipe, because it is believed.
     ("wfm_contract_watchlist.json", "watched riven / lich contracts"),
     ("web_bookmarks.json", "saved pages in the embedded web apps"),
+    # ...and so were these two: the wipe left the mod collection and the
+    # cached mastery rank behind.
+    ("mods_player.db", "Mods: your collection (owned / lost flags)"),
+    ("mastery.json", "cached mastery rank"),
     ("launch-error.log", "startup crash log (only exists after a crash)"),
 ]
 
@@ -142,9 +151,10 @@ def user_data_files() -> list[tuple[str, Path, str, int]]:
 
 def thumb_cache_size() -> tuple[int, int]:
     """(file count, total bytes) of the downloaded-image caches (market
-    thumbnails + wiki mod-card art) - sized and wiped as one group."""
+    thumbnails, wiki mod-card art, mastery badges) - sized and wiped as one
+    group."""
     n = total = 0
-    for d in (THUMB_CACHE, MOD_IMG_CACHE):
+    for d in IMAGE_CACHES:
         if d.is_dir():
             for f in d.iterdir():
                 if f.is_file():
@@ -199,7 +209,7 @@ def clear_thumb_cache() -> int:
     embedded in core/assets.py and assets/, not in the cache). Returns the
     number of files removed."""
     n = 0
-    for d in (THUMB_CACHE, MOD_IMG_CACHE):
+    for d in IMAGE_CACHES:
         if not d.is_dir():
             continue
         for f in d.iterdir():
@@ -312,54 +322,128 @@ def _set_run_entry(name: str, cmd: str | None) -> bool:
         return False
 
 
-def start_with_windows_enabled() -> bool:
-    return _run_entry_exists(RUN_NAME)
-
-
-def set_start_with_windows(enable: bool) -> bool:
-    cmd = f'"{_pythonw()}" "{LAUNCHER_PYW}"' if enable else None
-    return _set_run_entry(RUN_NAME, cmd)
-
-
-def watch_warframe_enabled() -> bool:
-    return _run_entry_exists(RUN_WATCHER_NAME)
-
-
-def set_watch_warframe(enable: bool) -> bool:
-    """'Launch with Warframe': register/remove the lightweight watcher that
-    starts with Windows, notices the game process appearing, and opens the
-    Toolbox. The watcher also re-reads settings each poll and exits itself
-    when the feature is turned off."""
-    cmd = f'"{_pythonw()}" "{WATCHER_PYW}"' if enable else None
-    return _set_run_entry(RUN_WATCHER_NAME, cmd)
-
-
-def _run_entry_broken(name: str) -> bool:
-    """Does this Run entry point at something that no longer exists? The
-    commands are '"<pythonw>" "<script>"' - both paths must resolve."""
+def _run_entry_paths(name: str) -> list[Path] | None:
+    """The paths a Run entry names - '"<pythonw>" "<script>"' - or None when
+    the entry is not registered."""
     try:
         import winreg
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as k:
             cmd, _ = winreg.QueryValueEx(k, name)
     except OSError:
+        return None
+    return [Path(part.strip()) for part in str(cmd).split('"')
+            if part.strip()]
+
+
+def _same_file(a, b) -> bool:
+    return (os.path.normcase(os.path.abspath(str(a)))
+            == os.path.normcase(os.path.abspath(str(b))))
+
+
+def _run_entry_is_ours(name: str, script) -> bool:
+    """Registered AND pointing at this copy's script. The Run key is one per
+    Windows user, but several copies of the app can exist on a machine (an
+    installed build and a dev clone): an entry that starts another copy is
+    not "enabled" as far as this copy's Settings page is concerned."""
+    parts = _run_entry_paths(name)
+    return bool(parts) and len(parts) >= 2 and _same_file(parts[1], script)
+
+
+def _set_owned_run_entry(name: str, script, enable: bool) -> bool:
+    """Enable: point the entry at this copy. Disable: remove it - but only
+    if it is ours. Turning the option off (or wiping user data) in one copy
+    must not silently delete another copy's autostart."""
+    if enable:
+        return _set_run_entry(name, f'"{_pythonw()}" "{script}"')
+    if _run_entry_exists(name) and not _run_entry_is_ours(name, script):
+        return True
+    return _set_run_entry(name, None)
+
+
+def start_with_windows_enabled() -> bool:
+    return _run_entry_is_ours(RUN_NAME, LAUNCHER_PYW)
+
+
+def set_start_with_windows(enable: bool) -> bool:
+    return _set_owned_run_entry(RUN_NAME, LAUNCHER_PYW, enable)
+
+
+def watch_warframe_enabled() -> bool:
+    return _run_entry_is_ours(RUN_WATCHER_NAME, WATCHER_PYW)
+
+
+def set_watch_warframe(enable: bool) -> bool:
+    """'Launch with Warframe': register/remove the lightweight watcher that
+    starts with Windows, notices the game process appearing, and opens the
+    Toolbox. The Run entry is the single source of truth: the watcher keeps
+    running only while the entry names its own file, so removing the entry
+    (here, or from outside the app) is what stops it."""
+    return _set_owned_run_entry(RUN_WATCHER_NAME, WATCHER_PYW, enable)
+
+
+def _run_entry_broken(name: str) -> bool:
+    """Does this Run entry point at something that no longer exists? The
+    commands are '"<pythonw>" "<script>"' - both paths must resolve."""
+    parts = _run_entry_paths(name)
+    if parts is None:
         return False                    # not registered: nothing to repair
-    parts = [p for p in str(cmd).split('"') if p.strip()]
-    return not all(Path(p.strip()).exists() for p in parts[:2])
+    return not all(part.exists() for part in parts[:2])
 
 
 def repair_run_entries() -> None:
-    """Heal Run entries that point at things which no longer exist.
+    """Heal Run entries, and let the installed build own them.
 
     The registry commands bake in absolute paths, so moving the folder or
     switching Python installs leaves entries that silently fail at logon
-    while the Settings checkbox still reads as enabled. Only BROKEN entries
-    are re-written: a working entry may belong to another copy of the app,
-    and merely launching this copy shouldn't hijack it. Called at every app
-    start (ui.app.main); a no-op when nothing is registered."""
-    if _run_entry_broken(RUN_NAME):
-        set_start_with_windows(True)
-    if _run_entry_broken(RUN_WATCHER_NAME):
-        set_watch_warframe(True)
+    while the Settings checkbox still reads as enabled. A BROKEN entry is
+    re-written to this copy.
+
+    A WORKING entry that starts another copy is left alone - merely
+    launching a dev clone must not hijack autostart - with one exception:
+    the INSTALLED build takes such an entry over. Autostart belongs to the
+    installed app; a dev clone that once registered itself (or healed a
+    broken entry after a folder move) hands it back the next time the
+    installed build runs.
+
+    Called at every app start (ui.app.main); a no-op when nothing is
+    registered."""
+    claim = paths.is_installed()
+    for name, script, setter in (
+            (RUN_NAME, LAUNCHER_PYW, set_start_with_windows),
+            (RUN_WATCHER_NAME, WATCHER_PYW, set_watch_warframe)):
+        if not _run_entry_exists(name):
+            continue
+        if _run_entry_broken(name) or (
+                claim and not _run_entry_is_ours(name, script)):
+            setter(True)
+
+
+#: Inno Setup's per-user uninstall record for the installed build (AppId in
+#: tools/installer/installer.iss + "_is1").
+_UNINSTALL_KEY = (r"Software\Microsoft\Windows\CurrentVersion\Uninstall"
+                  r"\{A1F5C7E2-4B93-4D6A-9C0E-3F2B1A8D7E6C}_is1")
+
+
+def sync_installed_version(version: str) -> None:
+    """Keep the version Windows shows under "Installed apps" in step with
+    the running app. The installer writes it once, but the app updates
+    itself afterwards, so without this the list shows whatever version the
+    installer was built at for ever. Installed build only; never raises."""
+    if not paths.is_installed():
+        return
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _UNINSTALL_KEY, 0,
+                            winreg.KEY_QUERY_VALUE | winreg.KEY_SET_VALUE) as k:
+            try:
+                current, _ = winreg.QueryValueEx(k, "DisplayVersion")
+            except OSError:
+                current = None
+            if current != version:
+                winreg.SetValueEx(k, "DisplayVersion", 0, winreg.REG_SZ,
+                                  version)
+    except OSError:
+        pass
 
 
 def spawn_watcher() -> bool:

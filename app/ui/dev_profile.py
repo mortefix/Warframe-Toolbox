@@ -32,7 +32,7 @@ class ProfileDevView(DevView):
     def build_cards(self) -> list:
         p = wf_profile.stored()
         if p is None:
-            hint = ("Set your account ID in Settings → Warframe, then Refresh."
+            hint = ("Set your account ID in Settings > Warframe, then Refresh."
                     if not wf_profile.configured()
                     else "Configured — click Refresh.")
             return [Card("No data", [("status", f"Not collected yet. {hint}")])]

@@ -25,6 +25,7 @@ from __future__ import annotations
 import threading
 from typing import Any, Callable
 
+import shiboken6
 from PySide6.QtCore import QObject, Signal
 
 from core import market as core_market
@@ -96,9 +97,31 @@ def _spawn(job: Job, body: Callable[[], Any]) -> Job:
     return job
 
 
-def run(fn: Callable[[], Any], on_done=None, on_error=None) -> Job:
-    """Call `fn()` on a worker thread; deliver the outcome via signals."""
+def _while_alive(owner, callback):
+    """`callback`, but a no-op once `owner` (a QObject) has been deleted.
+
+    Qt drops a queued signal whose RECEIVER is gone - but only a bound method
+    of a QObject has a receiver. A lambda or a local function has none, so it
+    still runs after its page was dropped (navigate away, unlink, wipe) and
+    then touches widgets whose C++ side no longer exists. A caller that passes
+    such a callback names the widget it belongs to with `owner=`."""
+    if owner is None or callback is None:
+        return callback
+
+    def guarded(payload):
+        if shiboken6.isValid(owner):
+            callback(payload)
+    return guarded
+
+
+def run(fn: Callable[[], Any], on_done=None, on_error=None, *,
+        owner: QObject | None = None) -> Job:
+    """Call `fn()` on a worker thread; deliver the outcome via signals.
+    Pass `owner=` whenever a callback is a lambda or a closure (see
+    _while_alive); bound-method callbacks do not need it."""
     job = Job()
+    on_done, on_error = (_while_alive(owner, on_done),
+                         _while_alive(owner, on_error))
     if on_done is not None:
         job.done.connect(on_done)
     if on_error is not None:
@@ -107,10 +130,14 @@ def run(fn: Callable[[], Any], on_done=None, on_error=None) -> Job:
 
 
 def run_stepped(fn: Callable[[Job], Any], on_step,
-                on_done=None, on_error=None) -> Job:
+                on_done=None, on_error=None, *,
+                owner: QObject | None = None) -> Job:
     """As `run`, but `fn` receives the Job so it can `job.step.emit(payload)`
     as it goes and check `job.cancelled` between items."""
     job = Job()
+    on_step, on_done, on_error = (_while_alive(owner, on_step),
+                                  _while_alive(owner, on_done),
+                                  _while_alive(owner, on_error))
     job.step.connect(on_step)
     if on_done is not None:
         job.done.connect(on_done)

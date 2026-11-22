@@ -18,8 +18,9 @@ change to collection. The UI reads the store (instant, offline); the network cal
 happens only on refresh, off the GUI thread.
 
 The account id is NOT in EE.log on current game builds, and is not the
-warframe.market id. It is captured once from warframe.com/api/user-data (a website
-login, handled by the UI's Connect-Warframe.com flow) or pasted in Settings, and
+warframe.market id. It is captured once from the signed-in warframe.com site (its
+`user-info` cookie - see ui/wf_connect.py; the old /api/user-data endpoint is gone)
+by the UI's Connect-Warframe.com flow, or pasted in Settings, and
 stored via core.config. Until it is set, read_mastery_cached() returns None and
 Home falls back to the existing AlecaFrame reader - no behaviour change.
 """
@@ -60,7 +61,7 @@ def profile_url(account_id: str, platform: str = "pc") -> str:
     return f"{host}/cdn/getProfileViewingData.php?playerId={account_id}"
 
 
-#: Key names that hold the account id in warframe.com/api/user-data, best first.
+#: Key names that hold the account id in the site's user-info JSON, best first.
 _ID_KEYS = ("user_id", "userid", "accountid", "account_id", "id")
 
 
@@ -85,7 +86,7 @@ def _find_id(obj: object, key_ok: Callable[[str], bool]) -> str | None:
 
 
 def extract_account_id(user_data_text: str) -> str | None:
-    """Pull the 24-hex account id out of a warframe.com/api/user-data JSON body.
+    """Pull the 24-hex account id out of warframe.com's user-info JSON.
 
     Known keys (user_id, accountId, ...) are tried first, then any key merely
     containing 'id' whose value is a valid account id - so a shift in the

@@ -10,7 +10,7 @@ Authorization header on the way out.
 Security posture:
   * The password is used for exactly one signin request and is never written
     to disk, never logged, and never passed to a tool.
-  * The cached session (.wfm_session.json) holds the JWT, username, platform,
+  * The cached session (wfm_session.json) holds the JWT, username, platform,
     and the login EMAIL - the email solely to prefill the sign-in form.
     Delete the file - or use Unlink in the app - to revoke the link locally.
     chmod 600 is applied best-effort; on Windows it only clears the read-only
@@ -18,10 +18,11 @@ Security posture:
   * The JWT lives only in the host process; tools get a per-launch gateway
     token instead, valid only against 127.0.0.1 and only while the host runs.
 
-The file lives in the per-machine data root (core.paths.USERDATA) - never
-inside the app folder, so a copy of the app on a flash drive or in a git
-push can never carry the token. The data folder's ACLs (the user profile's,
-in the default location) are what protect it.
+The file lives in the data root (core.paths.USERDATA) - never among the
+tracked files, so a git push can never carry the token. By default that is
+the per-user profile folder, whose ACLs are what protect it. In portable/dev
+mode it is <project root>/userdata/, which IS inside the project folder (kept
+out of git by .gitignore): copying or zipping that folder copies the token.
 """
 
 from __future__ import annotations
@@ -145,23 +146,30 @@ def save(sess: Session) -> None:
     """Write the session atomically: this is the single most valuable file
     the app owns, and a truncated one reads as 'no account' - silently
     unlinking you. The temp file is locked down BEFORE it holds the JWT."""
-    tmp = SESSION_PATH.with_suffix(".tmp")
+    # A per-process temp name (as core.atomic uses): a fixed '.tmp' is the
+    # name two overlapping saves would share. Not atomic.write_json itself,
+    # because this file must be locked down before the token is written.
+    tmp = SESSION_PATH.with_name(f"{SESSION_PATH.name}.{os.getpid()}.tmp")
     payload = json.dumps({
         "jwt": sess.jwt,
         "username": sess.username,
         "platform": sess.platform,
         "email": sess.email,
     })
-    tmp.touch()
-    # Best-effort (never fail a good sign-in over file metadata):
-    # meaningful on POSIX; on Windows this only clears the read-only bit -
-    # the folder's ACLs are the real protection.
     try:
-        os.chmod(tmp, 0o600)
+        tmp.touch()
+        # Best-effort (never fail a good sign-in over file metadata):
+        # meaningful on POSIX; on Windows this only clears the read-only
+        # bit - the folder's ACLs are the real protection.
+        try:
+            os.chmod(tmp, 0o600)
+        except OSError:
+            pass
+        tmp.write_text(payload)
+        os.replace(tmp, SESSION_PATH)   # atomic on NTFS and POSIX
     except OSError:
-        pass
-    tmp.write_text(payload)
-    os.replace(tmp, SESSION_PATH)       # atomic on NTFS and POSIX
+        tmp.unlink(missing_ok=True)     # never leave a stray token copy
+        raise
     try:
         os.chmod(SESSION_PATH, 0o600)
     except OSError:

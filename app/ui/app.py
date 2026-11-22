@@ -1,8 +1,8 @@
 """The PySide6 shell: header, sidebar, content stack.
 
-Runs beside the Tk app, not instead of it - launch with `--qt` or
-`WFTOOLBOX_UI=qt`. Screens are ported one at a time (Phase 3); anything not
-yet ported shows a placeholder, so the shell is testable from day one.
+The app's only front end: `Warframe Toolbox.pyw` calls main() here. (It was
+built screen by screen beside a Tkinter host, which was removed once every
+screen was ported.) A nav key with no page of its own shows a placeholder.
 
 Three pieces of Tk machinery simply cease to exist here:
 
@@ -42,8 +42,9 @@ from registry import TOOLS                                    # noqa: E402
 from ui import icons                                          # noqa: E402
 from ui import qss                                            # noqa: E402
 from ui.bridge import PresenceBridge                          # noqa: E402
-from ui.widgets import (Finial, clear_pixmap_cache, hairline,  # noqa: E402
-                        label, logo_pixmap, panel, restyle, vline)
+from ui.widgets import (Dot, Finial, button_sheet,  # noqa: E402
+                        clear_pixmap_cache, hairline, label, logo_pixmap,
+                        panel, restyle, vline)
 
 SIDEBAR_MIN_WIDTH = 150
 #  finial rail + glyph + the nav button's left/right padding. Every row shares
@@ -53,8 +54,7 @@ SIDEBAR_CHROME = 10 + 26 + 16 + 12
 #  from each boxed row - the whole rail is inset from its edges, and each box
 #  adds a 1px border plus interior padding on both sides - so the width has to
 #  budget for it or the longest boxed label (My Listings) clips inside its box.
-NAV_RAIL_MARGIN = 8          # inset of the rail's content from the sidebar edges,
-                             # and the gap between the stacked groups (outside pad)
+NAV_RAIL_MARGIN = t.NAV_RAIL_MARGIN   # (a core.theme metric; aliased for callers)
 NAV_SECTION_PAD = 6          # padding inside each container, around its rows
 NAV_SECTION_BORDER = t.BORDER_W  # the gold border, per side (qss uses the same)
 NAV_SECTION_CHROME = 2 * (NAV_RAIL_MARGIN + NAV_SECTION_BORDER + NAV_SECTION_PAD)
@@ -120,11 +120,11 @@ class Placeholder(QWidget):
         super().__init__()
         self.setAttribute(Qt.WA_StyledBackground, True)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(t.SP_SCREEN, t.SP_XL, t.SP_SCREEN, t.SP_XL)
+        lay.setContentsMargins(*t.PAGE_MARGINS)
         lay.setSpacing(t.SP_LG)
         lay.addWidget(label(title, role="h1"))
-        lay.addWidget(label("Not ported to Qt yet - run without --qt for the "
-                            "working version of this screen.", role="muted"))
+        lay.addWidget(label("This screen is not available yet.",
+                            role="muted"))
         lay.addStretch(1)
 
 
@@ -142,11 +142,14 @@ class StatusControl(QWidget):
     detail line is where an outage becomes visible.
     """
 
-    # The third field is the SELECTED chip's background fill. Offline's is a
-    # muted SURFACE (not MUTED-the-text-colour) - see theme.MUTED_SURFACE.
-    STATES = (("ingame", "In-game", t.WFM_TEAL),
-              ("online", "Online", t.OK),
-              ("offline", "Offline", t.MUTED_SURFACE))
+    # The third field is the SELECTED chip's background fill, as a
+    # core.theme token NAME - resolved in paint(), never here: a colour copied
+    # into a class attribute is frozen at import and survives a theme switch.
+    # Offline's is a muted SURFACE (not MUTED-the-text-colour) - see
+    # theme.MUTED_SURFACE.
+    STATES = (("ingame", "In-game", "WFM_TEAL"),
+              ("online", "Online", "OK"),
+              ("offline", "Offline", "MUTED_SURFACE"))
 
     def __init__(self, on_pick) -> None:
         super().__init__()
@@ -155,7 +158,7 @@ class StatusControl(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(t.SP_SM)
 
-        self.dot = label("●", role="small")
+        self.dot = Dot()
         self.dot.setToolTip("websocket connection to warframe.market")
         lay.addWidget(self.dot)
         lay.addWidget(label("Status", role="muted"))
@@ -163,7 +166,6 @@ class StatusControl(QWidget):
         self.buttons: dict[str, QPushButton] = {}
         for state, text, colour in self.STATES:
             b = QPushButton(text)
-            b.setProperty("size", "small")
             b.setCursor(Qt.PointingHandCursor)
             b.setToolTip({
                 "ingame": "appear in-game - what most buyers filter for",
@@ -182,10 +184,11 @@ class StatusControl(QWidget):
     def paint(self, want: str, connected: bool, detail) -> None:
         for state, b in self.buttons.items():
             active = state == want
-            b.setStyleSheet(
-                f"color: {t.INK if active else t.TEXT};"
-                f"background: {b._accent if active else t.PANEL};"
-                f"border: none; padding: 3px 9px;")
+            fill = t.color(b._accent) if active else t.PANEL
+            # the selected chip does not react to the pointer; the others do
+            b.setStyleSheet(button_sheet(
+                t.INK if active else t.TEXT, pad=t.BTN_PAD, bg=fill,
+                hover_bg=fill if active else t.PANEL_HI))
         # offline is a CHOICE, not a fault: no socket is the correct state
         # there, so the dot stays neutral rather than reading as an error
         if want == "offline":
@@ -194,7 +197,7 @@ class StatusControl(QWidget):
             role, tip = t.OK, "connected to warframe.market"
         else:
             role, tip = t.ERR, "not connected to warframe.market"
-        self.dot.setStyleSheet(f"color: {role};")
+        self.dot.set_colour(role)
         self.dot.setToolTip(tip)
         self.detail.setText(str(detail) if detail else "")
         self.detail.setStyleSheet(
@@ -212,7 +215,7 @@ class SignInRequired(QWidget):
         super().__init__()
         self.setAttribute(Qt.WA_StyledBackground, True)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(t.SP_SCREEN, t.SP_XL, t.SP_SCREEN, t.SP_XL)
+        lay.setContentsMargins(*t.PAGE_MARGINS)
         lay.setSpacing(t.SP_LG)
         lay.addWidget(label("My Listings", role="h1"))
         lay.addWidget(label("Sign in to warframe.market to see and manage "
@@ -259,8 +262,8 @@ class MainWindow(QWidget):
         self._rows: dict[str, NavRow] = {}
         self._pages: dict[str, int] = {}   # nav key -> QStackedWidget index
         self.current = ""
-        # The account link is shared with the Tk app through the same cached
-        # session file, so signing in there shows up here on next launch.
+        # The account link is the cached session file: a sign-in survives
+        # to the next launch.
         self.session = core_session.load()
         self.settings = core_config.load_settings()
         self._pending_wiki: str | None = None
@@ -742,7 +745,7 @@ class MainWindow(QWidget):
             else:
                 tab.search.setText(name)    # not traded: leave the search set
 
-        self._market_link_job = work.run(find, done)
+        self._market_link_job = work.run(find, done, owner=self)
 
     def open_market_item(self, slug: str, name: str) -> None:
         """Deep-link the Market app when the caller already holds the slug
@@ -782,13 +785,16 @@ class MainWindow(QWidget):
                 page.drawer.reload()
                 page._paint_star()
 
-    def wipe_user_data(self) -> None:
+    def wipe_user_data(self) -> bool:
         """Delete everything the app has written, then rebuild from defaults.
+        Returns False when the web-app profile could not be cleared, so the
+        caller does not claim a complete wipe that was not one.
 
         Cached screens are dropped rather than refreshed: they hold the very
         data that was just deleted and would happily write it straight back
         out on the next save.
         """
+        web_ok = True
         for name, path, _desc, _size in core_config.user_data_files():
             if name != "wfm_session.json":
                 core_config.delete_user_file(path)
@@ -798,7 +804,7 @@ class MainWindow(QWidget):
             from ui import web as _web
             _web.clear_all_data()
         except Exception:                       # noqa: BLE001
-            pass
+            web_ok = False
         # the retired Tk front end's WebView2 profile (if any remains): a
         # wipe that leaves ~195 MB of old cookies and history behind is a
         # wipe the user cannot trust
@@ -812,9 +818,10 @@ class MainWindow(QWidget):
         # settings too: its pages show pre-wipe values otherwise, and the
         # session page is only dropped by unlink_account (session-only)
         self._drop_pages("listings", "market", "vosfor", "home",
-                         "settings")
+                         "settings", "mods_shade")
         if self.session is not None:
             self.unlink_account()
+        return web_ok
 
     def _drop_pages(self, *keys: str) -> None:
         """Forget cached pages so they are rebuilt on the next visit.
@@ -999,14 +1006,29 @@ class MainWindow(QWidget):
     def _check_updates(self) -> None:
         """Launch-time self-update (core.updater), off-thread. Silent unless
         it actually updated; every rail (toggle, branch, dirty tree) lives in
-        the core module."""
+        the core module. Two jobs: the check, then - only when an update is
+        waiting - the apply, with the module preload between them here on
+        the GUI thread."""
         from core import updater as core_updater
         from ui import work
 
         def job(settings=dict(self.settings)):
-            return core_updater.check_and_update(settings)
+            return core_updater.check(settings)
 
-        self._update_job = work.run(job, self._update_check_done)
+        self._update_job = work.run(job, self._update_found)
+
+    def _update_found(self, result) -> None:
+        if not getattr(result, "behind", False):
+            return
+        from core import updater as core_updater
+        from ui import work
+        # Load every not-yet-imported screen from the CURRENT files before
+        # they are replaced (see core.updater.preload_modules).
+        core_updater.preload_modules()
+        # its own attribute: rebinding _update_job here would destroy the
+        # first Job from inside its own signal delivery
+        self._update_apply_job = work.run(core_updater.apply,
+                                          self._update_check_done)
 
     def _update_check_done(self, result) -> None:
         """Update finished. The new code applies next launch; all this does
@@ -1049,6 +1071,14 @@ def main(argv: list[str] | None = None) -> int:
     # moved, Python reinstalled). After the lock: only the surviving instance
     # may touch the registry.
     core_config.repair_run_entries()
+    # "Launch with Warframe" is on: make sure the watcher is actually running
+    # (it normally starts at logon; this covers an entry the installer or a
+    # repair just wrote, and a watcher that died). A second watcher exits at
+    # once on its own mutex.
+    if core_config.watch_warframe_enabled():
+        core_config.spawn_watcher()
+    from core import version as core_version
+    core_config.sync_installed_version(core_version.__version__)
     app.setStyleSheet(qss.build(set(QFontDatabase.families())))
     win = MainWindow()
     win.show_configured()

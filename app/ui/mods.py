@@ -21,7 +21,8 @@ from PySide6.QtWidgets import (QCheckBox, QFrame, QGridLayout, QHBoxLayout,
 from core import mods_db
 from core import theme as t
 from ui import work
-from ui.widgets import Dropdown, hairline, label, panel, polarity_icon
+from ui.widgets import (Dropdown, glyph_icon, hairline, label, panel,
+                        polarity_icon)
 
 _COLUMNS = ("Owned", "Name", "Sets", "Compat", "Polarity", "Rarity",
             "Drain", "Rank")
@@ -50,7 +51,7 @@ class ModsView(QWidget):
         frame = QWidget()
         frame.setAttribute(Qt.WA_StyledBackground, True)
         lay = QVBoxLayout(frame)
-        lay.setContentsMargins(t.SP_SCREEN, t.SP_XL, t.SP_SCREEN, t.SP_XL)
+        lay.setContentsMargins(*t.PAGE_MARGINS)
         lay.setSpacing(t.SP_LG)
         scroll.setWidget(frame)
 
@@ -111,7 +112,8 @@ class ModsView(QWidget):
             self.sort.addItem(label_, key)
         self.sort.currentIndexChanged.connect(self._requery)
         row1.addWidget(self.sort)
-        refresh = QPushButton("↻ Refresh data")
+        refresh = QPushButton(" Refresh data")
+        refresh.setIcon(glyph_icon("refresh", color=t.TEXT))
         refresh.clicked.connect(self._sync)
         row1.addWidget(refresh)
         bar_l.addLayout(row1)
@@ -282,7 +284,7 @@ class ModsView(QWidget):
             self._row_urls.append(r.get("wiki_url") or "")
             self._row_of.append(r.get("of_id"))
             owned = r.get("owned")
-            mark = "✔" if owned == 1 else ("lost" if owned == 0 else "")
+            mark = "owned" if owned == 1 else ("lost" if owned == 0 else "")
             rank = ""
             if r.get("max_rank") is not None:
                 cur = r.get("current_rank")

@@ -98,14 +98,15 @@ class Presence:
         if self._thread and self._thread.is_alive() \
                 and not self._stop.is_set():
             # Socket already up (or coming up). Hand the status to the
-            # worker instead of sending from here: this is the Tk thread,
+            # worker instead of sending from here: this is the GUI thread,
             # and ws.send blocks on _send_lock (shared with the keepalive
             # ping and the up-to-8s auth exchange). The worker applies it
-            # as soon as it is authenticated - and _run re-applies _want
-            # right after auth anyway, so a mid-auth toggle still lands.
+            # within one recv timeout (~1s) once authenticated - and _run
+            # re-applies _want right after auth anyway, so a mid-auth toggle
+            # still lands. (This used to ALSO send directly when connected:
+            # the very blocking call the comment warned about, and the
+            # status then went out twice.)
             self._pending = state
-            if self.connected:
-                self._send_status(state)
             self._notify(state, self.connected,
                          None if self.connected else "connecting…")
         else:
@@ -117,8 +118,13 @@ class Presence:
             self._stop = stop
             self._thread = threading.Thread(target=self._run, args=(stop,),
                                             daemon=True, name="wfm-presence")
-            self._thread.start()
+            # Announce "connecting" BEFORE the worker starts. Afterwards, a
+            # worker that finished first (an instant refusal, a very fast
+            # connect) had its real outcome overwritten by this line: the
+            # toggle then read "connecting…" for ever, or "not connected"
+            # over a live socket.
             self._notify(state, False, "connecting…")
+            self._thread.start()
 
     def shutdown(self) -> None:
         self._want = "offline"

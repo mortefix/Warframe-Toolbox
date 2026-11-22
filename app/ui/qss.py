@@ -64,6 +64,12 @@ def build(available_families=()) -> str:
     button = _font_rule("button", available_families)
     terminal = _font_rule("terminal", available_families)
 
+    # one bottom-edge rule per ink token, for the active tab of a tab strip
+    tab_accents = "\n".join(
+        f'QPushButton[tab="true"][active="true"][accent="{name}"] '
+        f'{{ border-bottom-color: {t.color(name)}; }}'
+        for name in t._INK_TOKENS)
+
     return f"""
 /* ---- base -------------------------------------------------------------
    NO universal background rule. In Qt the `QWidget` selector also matches
@@ -91,6 +97,60 @@ QToolTip {{
     border: {t.BORDER_W}px solid {t.BORDER};
     padding: 4px 6px;
 }}
+
+/* ---- windows that are not the main window ------------------------------
+   A dialog, a message box and a menu are top-level windows of their own. With
+   no rule here they painted the WINDOWS system colour - light or dark, by the
+   user's OS setting - under text coloured by the theme: a dark theme on
+   light-mode Windows (or a light theme on dark-mode Windows) drew the setup
+   wizard, the sign-in form and every confirmation as invisible text. They sit
+   on PANEL, the raised surface, so a dialog reads as lifted off the page.
+   QMessageBox is a QDialog, so this covers it too. */
+QDialog {{ background: {t.PANEL}; }}
+/* The default button hovers and disables to PANEL - which is the dialog's own
+   surface, so both states would dissolve into it. Step them down instead. */
+QDialog QPushButton:hover    {{ background: {t.BG}; }}
+QDialog QPushButton:disabled {{ background: {t.TAB_BG}; }}
+QDialog QPushButton[kind="flat"]:hover,
+QDialog QPushButton[kind="flat"]:disabled,
+QDialog QPushButton[role="glyph"]:hover {{ background: transparent; }}
+
+/* the tray menu, and the right-click menu every text field carries */
+QMenu {{
+    background: {t.PANEL};
+    color: {t.TEXT};
+    border: {t.BORDER_W}px solid {t.BORDER};
+    padding: {t.SP_SM}px 0;
+}}
+QMenu::item {{ background: transparent; padding: {t.SP_SM}px {t.SP_XL}px; }}
+QMenu::item:selected {{ background: {t.GOLD_FAINT}; color: {t.TEXT}; }}
+QMenu::item:disabled {{ color: {t.MUTED}; }}
+QMenu::separator {{ height: {t.CTRL_BORDER_W}px; background: {t.BORDER};
+                    margin: {t.SP_SM}px 0; }}
+
+/* tables and trees (Settings > DevTools > Mods DB): a field-coloured grid,
+   zebra rows where a view asks for them, the same faint-gold selection the
+   dropdowns use, and a header that reads as a panel strip. */
+QTableView, QTreeView {{
+    background: {t.FIELD_BG_OUT};
+    alternate-background-color: {t.ROW_ALT};
+    color: {t.TEXT};
+    gridline-color: {t.BORDER};
+    border: {t.CTRL_BORDER_W}px solid {t.BORDER};
+    selection-background-color: {t.GOLD_FAINT};
+    selection-color: {t.TEXT};
+    outline: none;
+}}
+QHeaderView {{ background: {t.PANEL}; border: none; }}
+QHeaderView::section {{
+    background: {t.PANEL};
+    color: {t.MUTED};
+    border: none;
+    border-right: {t.CTRL_BORDER_W}px solid {t.BORDER};
+    border-bottom: {t.CTRL_BORDER_W}px solid {t.BORDER};
+    padding: {t.SP_SM}px {t.SP_MD}px;
+}}
+QTableCornerButton::section {{ background: {t.PANEL}; border: none; }}
 
 /* ---- text roles ------------------------------------------------------- */
 /* the app/header title ("Warframe Toolbox - X") is its OWN font category, so a
@@ -132,13 +192,21 @@ QWidget[surface="tab"]     {{ background: {t.WFM_CARD}; }}
 QWidget[surface="panel"]   {{ background: {t.PANEL}; }}
 /* Home tool cards: BG (the page colour, by request) inside the darker
    surface="card" section that holds them, so each card reads as a lighter tile
-   in a darker tray, delineated by the same gold WFM_EDGE inlay the market and
+   in a darker tray, delineated by the same gold BORDER inlay the market and
    settings cards use. No hover state - the background must not change on
    mouseover (explicit user decision). */
 QWidget[surface="tile"]    {{ background: {t.BG};
                               border: {t.BORDER_W}px solid {t.BORDER}; }}
-QWidget[surface="card"]    {{ background: {t.WFM_CARD};
+/* surface="listing" is an order / contract card: the card surface exactly,
+   plus a gold edge while it is a search hit. (Each card used to write this
+   rule out for itself, inline.) */
+QWidget[surface="card"],
+QWidget[surface="listing"] {{ background: {t.WFM_CARD};
                               border: {t.BORDER_W}px solid {t.BORDER}; }}
+QWidget[surface="listing"][hit="true"] {{ border-color: {t.ACCENT}; }}
+/* the slide-over drawer (web-app bookmarks): a raised panel with one edge */
+QWidget[surface="drawer"]  {{ background: {t.PANEL};
+                              border-left: {t.BORDER_W}px solid {t.BORDER}; }}
 /* the Home card's image placeholder (Element 5) - the deepest black in the
    app, the same backdrop item art sits on, so an empty band reads as a lit
    frame waiting for art rather than as a panel with a hole in it */
@@ -150,7 +218,7 @@ QWidget[surface="header"]  {{ background: {t.HEADER_BG}; }}
 QWidget[surface="sidebar"] {{ background: {t.SIDEBAR_BG}; }}
 /* The three app containers on the rail are just a GOLD OUTLINE: the fill is
    SIDEBAR_BG, identical to the rail and to the rows inside, so nothing but the
-   WFM_EDGE gold border (the body cards' exact trim) separates a group from the
+   BORDER gold edge (the body cards' exact trim) separates a group from the
    rail. */
 QWidget[surface="nav_section"] {{ background: {t.SIDEBAR_BG};
                                   border: {t.BORDER_W}px solid {t.BORDER}; }}
@@ -172,15 +240,14 @@ QPushButton {{
     background: {t.PANEL_HI};
     color: {t.TEXT};
     border: none;                      /* the Tk original is relief=flat, bd=0 */
-    padding: 5px 10px;
+    padding: {t.BTN_PAD};
     {button}
 }}
 QPushButton:hover   {{ background: {t.PANEL}; }}   /* darker, as in Tk */
 QPushButton:pressed {{ background: {t.GOLD_FAINT}; }}
 QPushButton:disabled {{ color: {t.MUTED}; background: {t.PANEL}; }}
 /* wide=True in the Tk helper: a roomier primary-of-its-row button */
-QPushButton[wide="true"] {{ padding: 5px 14px; }}
-QPushButton[size="small"] {{ {small} }}
+QPushButton[wide="true"] {{ padding: {t.BTN_PAD_WIDE}; }}
 /* glyph buttons: the ✉ whisper-copy needs the Fluent icon face or the
    codepoint falls back to a blank box in Segoe UI */
 QPushButton[role="glyph"] {{ {msgbtn} background: transparent; border: none;
@@ -198,10 +265,12 @@ QPushButton[kind="money"]:disabled {{ background: {t.GOLD_DIM};
                                       color: {t.PANEL}; }}
 /* the listing card's Reprice button opts into tighter vertical padding
    (compact="true") so it fits the compact height shared by the flat buttons
-   beside it - the base 5px padding otherwise makes it ~6px taller. NB: "size"
-   is a reserved QWidget property, so a [size="small"] selector never matches -
-   this uses a dedicated property instead. */
-QPushButton[kind="money"][compact="true"] {{ padding: 2px 10px; }}
+   beside it - the base 5px padding otherwise makes it ~6px taller. (The
+   property is "compact" because a style property cannot be called "size":
+   that is a built-in QWidget property, so Qt refuses to store it and a
+   selector on it never matches.) */
+QPushButton[kind="money"] {{ padding: {t.BTN_PAD_EDGED}; }}
+QPushButton[kind="money"][wide="true"] {{ padding: {t.BTN_PAD_EDGED_WIDE}; }}
 QPushButton[kind="danger"] {{
     background: {t.TITLEBAR_CLOSE};
     color: {t.TEXT};
@@ -214,12 +283,29 @@ QPushButton[kind="flat"] {{
 }}
 QPushButton[kind="flat"]:hover {{ color: {t.TEXT}; }}
 
+/* ---- tab strips (My Listings, Market) -----------------------------------
+   One rule for both screens: a muted label on the panel colour with a plain
+   edge; the active tab lights its label, drops to the tab well's colour and
+   takes ITS accent on the bottom edge. `accent` is a colour token name, so
+   the edge follows the theme with no code involved. */
+QPushButton[tab="true"] {{
+    color: {t.MUTED};
+    background: {t.PANEL};
+    border: none;
+    border-bottom: {t.BORDER_W}px solid {t.BORDER};
+    padding: 6px 18px;
+}}
+QPushButton[tab="true"]:hover {{ color: {t.TEXT}; background: {t.PANEL}; }}
+QPushButton[tab="true"][active="true"] {{ color: {t.TEXT};
+                                          background: {t.TAB_BG}; }}
+{tab_accents}
+
 /* ---- inputs ----------------------------------------------------------- */
 QLineEdit, QSpinBox, QComboBox, QPlainTextEdit, QTextEdit {{
     background: {t.FIELD_BG_OUT};
     color: {t.TEXT};
     {field}
-    border: {t.CTRL_BORDER_W}px solid {t.BORDER};
+    border: {t.CTRL_BORDER_W}px solid {t.FIELD_EDGE};
     selection-background-color: {t.GOLD_FAINT};
     selection-color: {t.TEXT};
     /* 2px, not 4: at 300% scaling a 4px pad is 12 real pixels top and
@@ -227,7 +313,7 @@ QLineEdit, QSpinBox, QComboBox, QPlainTextEdit, QTextEdit {{
     padding: 2px 6px;
 }}
 /* height cap on text fields only - a QComboBox needs room for its arrow */
-QLineEdit {{ max-height: 22px; }}
+QLineEdit {{ min-height: {t.FIELD_INNER_H}px; max-height: {t.FIELD_INNER_H}px; }}
 QWidget[surface="tab"] QLineEdit,
 QWidget[surface="tab"] QComboBox,
 QWidget[surface="tab"] QSpinBox {{ background: {t.FIELD_BG_IN}; }}
@@ -250,7 +336,7 @@ QLabel[role="combo-arrow"] {{ color: {t.MUTED}; background: transparent; }}
 QComboBox QAbstractItemView {{
     background: {t.PANEL};
     color: {t.TEXT};
-    border: {t.CTRL_BORDER_W}px solid {t.BORDER};
+    border: {t.CTRL_BORDER_W}px solid {t.FIELD_EDGE};
     selection-background-color: {t.GOLD_FAINT};
     outline: none;
 }}
@@ -279,7 +365,7 @@ QCheckBox, QRadioButton {{ background: transparent; color: {t.TEXT}; }}
 QCheckBox::indicator, QRadioButton::indicator {{
     width: 14px; height: 14px;
     background: {t.FIELD_BG_OUT};
-    border: {t.CTRL_BORDER_W}px solid {t.BORDER};
+    border: {t.CTRL_BORDER_W}px solid {t.FIELD_EDGE};
 }}
 /* The checked fill is INSET rather than edge-to-edge: two adjacent filled
    boxes at 100% read as one blob, and leaving the frame visible keeps each
@@ -365,6 +451,19 @@ QWidget[nav="row"][active="true"] QLabel[nav="icon"] {{ color: {t.ACCENT}; }}
 QWidget[nav="row"][active="false"]:hover QLabel[nav="icon"] {{
     color: {t.TEXT};
 }}
+
+/* the Settings tree's pages: the rail's highlight and hover, one level in */
+QPushButton[nav="leaf"] {{
+    text-align: left;
+    padding: 5px 8px 5px 34px;
+    border: none;
+    background: transparent;
+    color: {t.MUTED};
+}}
+QPushButton[nav="leaf"]:hover {{ background: {t.TITLEBAR_HOVER};
+                                 color: {t.TEXT}; }}
+QPushButton[nav="leaf"][active="true"] {{ background: {t.SIDEBAR_ACTIVE};
+                                          color: {t.TEXT}; }}
 
 /* ---- badges (My Listings cards) --------------------------------------- */
 QLabel[badge="sell"] {{ background: {t.WFM_BADGE_BG};

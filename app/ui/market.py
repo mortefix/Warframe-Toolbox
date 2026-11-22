@@ -25,12 +25,14 @@ from core import market_vm as vm
 from core import theme as t
 from ui.suggest import SuggestBox
 from ui.work import run
-from ui.widgets import (Dropdown, alive, glyph_icon, hairline, label, panel,
+from ui.widgets import (Dot, Dropdown, alive, button_sheet, glyph_icon,
+                        hairline, icon_text, label, panel, set_tab_active, tab_button,
                         plat_label, restyle)
 
-ROLE_COLOR = {"ingame": t.WFM_TEAL, "ok": t.OK, "muted": t.MUTED,
-              "err": t.ERR, "accent": t.ACCENT, "warn": t.WARN,
-              "rep_up": t.REP_UP, "rep_down": t.REP_DOWN}
+# Token NAMES, read live (theme.TokenMap) - see ui/listings.py ROLE_COLOR.
+ROLE_COLOR = t.TokenMap(ingame="WFM_TEAL", ok="OK", muted="MUTED", err="ERR",
+                        accent="ACCENT", warn="WARN", rep_up="REP_UP",
+                        rep_down="REP_DOWN")
 
 ROWS = 12          # contracts page size (the order book shows them all)
 TABLE_ROWS = 12    # rows of height a table reserves before it has data
@@ -39,8 +41,8 @@ COL_QTY, COL_RANK, COL_PLAT = 46, 40, 46
 ANY_RANK = "any"
 RANK_WIDTH = 90     # fixed, so showing it costs the search box a known
                     # amount rather than a text-dependent one
-TAB_ACCENTS = {"market": t.WFM_TEAL, "contracts": t.WFM_PINK,
-               "watchlist": t.ACCENT}
+TAB_ACCENTS = t.TokenMap(market="WFM_TEAL", contracts="WFM_PINK",
+                         watchlist="ACCENT")
 
 
 def _track(jobs: set, job):
@@ -98,8 +100,7 @@ class StatusFilters(QWidget):
         lay.addWidget(self.ingame)
         lay.addSpacing(t.SP_MD)
         for role, text in vm.STATUS_KEY:
-            dot = label("●", role="small")
-            dot.setStyleSheet(f"color: {ROLE_COLOR[role]};")
+            dot = Dot(ROLE_COLOR[role])
             dot.setToolTip(f"{text} traders")
             lay.addWidget(dot)
             cap = label(text, role="small")
@@ -175,7 +176,6 @@ class MarketTab(QWidget):
         ctl.addStretch(1)
         self.refresh_btn = QPushButton(" Refresh")
         self.refresh_btn.setIcon(glyph_icon("refresh", color=t.TEXT))
-        self.refresh_btn.setProperty("size", "small")
         self.refresh_btn.clicked.connect(self.refresh)
         ctl.addWidget(self.refresh_btn)
         # the glyph is an ICON, not text - see widgets.glyph_icon for why.
@@ -183,13 +183,11 @@ class MarketTab(QWidget):
         # it read as one label rather than as two different greys
         self.wiki_btn = QPushButton(glyph_icon(t.WIKI_ICON, color=t.TEXT),
                                     " Wiki")
-        self.wiki_btn.setProperty("size", "small")
         self.wiki_btn.setEnabled(False)
         self.wiki_btn.setToolTip("open this item on the wiki")
         self.wiki_btn.clicked.connect(self._open_wiki)
         ctl.addWidget(self.wiki_btn)
         self.watch_btn = QPushButton(" Watch")
-        self.watch_btn.setProperty("size", "small")
         self.watch_btn.setEnabled(False)
         self.watch_btn.clicked.connect(self._toggle_watch)
         ctl.addWidget(self.watch_btn)
@@ -236,12 +234,10 @@ class MarketTab(QWidget):
             # plum for wts, blue for wtb - which already matches (sell=plum).
             act_text = vm.own_action(side)
             act = QPushButton(act_text)
-            act.setProperty("size", "small")
             act.setCursor(Qt.PointingHandCursor)
             act.setToolTip("post your own order - lands with My Listings")
-            act.setStyleSheet(
-                f"color: {colour}; background: {t.ROW_ALT};"
-                f"border: {t.CTRL_BORDER_W}px solid {colour}; padding: 2px 10px;")
+            act.setStyleSheet(button_sheet(colour, pad=t.BTN_PAD_EDGED,
+                                           bg=t.ROW_ALT, edge=colour))
             act.clicked.connect(lambda _c=False, sd=side: self._post_order(sd))
             top.addWidget(act, 0, Qt.AlignTop)
             self.actions[side] = act
@@ -497,11 +493,9 @@ class MarketTab(QWidget):
     def _order_row(self, i: int, side: str, r: dict, me: str) -> QWidget:
         row = _row_panel(i)
         h = QHBoxLayout(row)
-        h.setContentsMargins(t.SP_MD, 2, t.SP_MD, 2)
+        h.setContentsMargins(t.SP_MD, t.SP_XXS, t.SP_MD, t.SP_XXS)
         h.setSpacing(t.SP_SM)
-        glyph, role = vm.status_dot(r["status"])
-        dot = label(glyph, role="small")
-        dot.setStyleSheet(f"color: {ROLE_COLOR[role]};")
+        dot = Dot(ROLE_COLOR[vm.status_role(r["status"])])
         h.addWidget(dot)
         user = label(f" {r['user']}")
         if r["user"].lower() == me:
@@ -511,8 +505,8 @@ class MarketTab(QWidget):
         if rep:
             # only the ARROW is coloured - a coloured number stops reading as
             # a quantity and starts reading as a status
-            arrow = label(f" {rep.arrow}", role="small")
-            arrow.setStyleSheet(f"color: {ROLE_COLOR[rep.role]};")
+            arrow = label(" " + icon_text(rep.arrow, ROLE_COLOR[rep.role]),
+                          role="small")
             arrow.setToolTip("trader reputation")
             h.addWidget(arrow)
             count = label(rep.value, role="small")
@@ -521,7 +515,7 @@ class MarketTab(QWidget):
         h.addStretch(1)
         # fixed, equal columns so quantity / rank / price / ✉ line up down the
         # list instead of drifting with each trader's name length
-        qty = label(f"{r['quantity']} ❒", role="small")
+        qty = label(f"{r['quantity']} {icon_text('stack')}", role="small")
         qty.setFixedWidth(COL_QTY)
         qty.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         h.addWidget(qty)
@@ -560,7 +554,7 @@ class MarketTab(QWidget):
         QApplication.clipboard().setText(
             vm.whisper_message(self.view.settings, side, r, self.name))
         # a confirmation, not state - it fades on its own
-        self._flash(f"whisper for {r['user']} copied ✔", "ok")
+        self._flash(f"whisper for {r['user']} copied", "ok")
 
     # -- watchlist -----------------------------------------------------------
 
@@ -569,7 +563,7 @@ class MarketTab(QWidget):
         text, role = vm.watch_label(watched)
         # the star FILLS rather than changing character - one glyph, two axis
         # values, so the pair cannot drift (see ui.icons)
-        self.watch_btn.setText(" " + text.split(" ", 1)[-1])
+        self.watch_btn.setText(" " + text)
         self.watch_btn.setIcon(glyph_icon("watch", filled=watched,
                                           color=ROLE_COLOR[role]))
         self.watch_btn.setStyleSheet(f"color: {ROLE_COLOR[role]};")
@@ -625,17 +619,14 @@ class ContractsTab(QWidget):
         ctl.addWidget(self.filters)
         ctl.addStretch(1)
         self.order_btn = QPushButton(vm.sort_label(self._asc))
-        self.order_btn.setProperty("size", "small")
         self.order_btn.setToolTip("click to reverse the order")
         self.order_btn.clicked.connect(self._flip)
         ctl.addWidget(self.order_btn)
         refresh = QPushButton(" Refresh")
         refresh.setIcon(glyph_icon("refresh", color=t.TEXT))
-        refresh.setProperty("size", "small")
         refresh.clicked.connect(lambda: self.slug and self.open())
         ctl.addWidget(refresh)
         self.watch_btn = QPushButton(" Watch")
-        self.watch_btn.setProperty("size", "small")
         self.watch_btn.setEnabled(False)
         self.watch_btn.clicked.connect(self._toggle_watch)
         ctl.addWidget(self.watch_btn)
@@ -650,6 +641,7 @@ class ContractsTab(QWidget):
         card = panel("card")
         cl = QVBoxLayout(card)
         cl.setContentsMargins(t.SP_LG, t.SP_MD, t.SP_LG, t.SP_MD)
+        cl.setSpacing(t.SP_MD)
         self.area = QScrollArea()
         self.area.setWidgetResizable(True)
         self.area.setFrameShape(QFrame.NoFrame)
@@ -758,7 +750,7 @@ class ContractsTab(QWidget):
             core_market.load_contract_watchlist(),
             self.kind.currentText(), self.slug)
         text, role = vm.watch_label(watched)
-        self.watch_btn.setText(" " + text.split(" ", 1)[-1])
+        self.watch_btn.setText(" " + text)
         self.watch_btn.setIcon(glyph_icon("watch", filled=watched,
                                           color=ROLE_COLOR[role]))
         self.watch_btn.setStyleSheet(f"color: {ROLE_COLOR[role]};")
@@ -782,9 +774,7 @@ class ContractsTab(QWidget):
             h = QHBoxLayout(line)
             h.setContentsMargins(t.SP_LG, t.SP_MD, t.SP_LG, t.SP_MD)
             h.setSpacing(t.SP_SM)
-            glyph, role = vm.status_dot(r["status"])
-            dot = label(glyph, role="small")
-            dot.setStyleSheet(f"color: {ROLE_COLOR[role]};")
+            dot = Dot(ROLE_COLOR[vm.status_role(r["status"])])
             h.addWidget(dot)
             title = label(r["title"])
             title.setStyleSheet(f"color: {t.WFM_TEAL};")
@@ -811,7 +801,7 @@ class ContractsTab(QWidget):
         from PySide6.QtWidgets import QApplication
         QApplication.clipboard().setText(vm.contract_whisper(
             self.view.settings, self.kind.currentText(), self.wname, r))
-        self.status.setText(f"whisper for {r['owner']} copied ✔")
+        self.status.setText(f"whisper for {r['owner']} copied")
         self.status.setProperty("level", "ok")
         restyle(self.status)
 
@@ -836,7 +826,6 @@ class WatchlistTab(QWidget):
         ctl.addStretch(1)
         btn = QPushButton(" Refresh prices")
         btn.setIcon(glyph_icon("refresh", color=t.TEXT))
-        btn.setProperty("size", "small")
         btn.clicked.connect(self.refresh_all)
         ctl.addWidget(btn)
         lay.addLayout(ctl)
@@ -877,8 +866,8 @@ class WatchlistTab(QWidget):
         b.setProperty("kind", "flat")
         b.setCursor(Qt.PointingHandCursor)
         b.setToolTip(tip)
-        b.setStyleSheet(f"color: {colour}; text-align: left;"
-                        f"padding: 4px 2px; background: transparent;")
+        b.setStyleSheet(button_sheet(colour, pad="4px 2px", align="left",
+                                     hover_bg="transparent", hover_fg=t.TEXT))
         b.clicked.connect(on_click)
         return b
 
@@ -910,12 +899,12 @@ class WatchlistTab(QWidget):
     def _fill_items(self, watchlist: list[str]) -> None:
         body, col = self._column("items")
         if not watchlist:
-            col.addWidget(label("Nothing watched yet — use ☆ Watch on the "
+            col.addWidget(label("Nothing watched yet — use Watch on the "
                                 "Market tab.", role="small"))
         for i, slug in enumerate(watchlist):
             line = _row_panel(i)
             h = QHBoxLayout(line)
-            h.setContentsMargins(t.SP_MD, 2, t.SP_MD, 2)
+            h.setContentsMargins(t.SP_MD, t.SP_XXS, t.SP_MD, t.SP_XXS)
             h.setSpacing(t.SP_SM)
             name = vm.pretty_slug(slug)
             h.addWidget(self._link(
@@ -936,12 +925,12 @@ class WatchlistTab(QWidget):
     def _fill_contracts(self, contracts: list[dict]) -> None:
         body, col = self._column("contracts")
         if not contracts:
-            col.addWidget(label("Nothing watched yet — use ☆ Watch on the "
+            col.addWidget(label("Nothing watched yet — use Watch on the "
                                 "Contracts tab.", role="small"))
         for i, entry in enumerate(contracts):
             line = _row_panel(i)
             h = QHBoxLayout(line)
-            h.setContentsMargins(t.SP_MD, 2, t.SP_MD, 2)
+            h.setContentsMargins(t.SP_MD, t.SP_XXS, t.SP_MD, t.SP_XXS)
             h.setSpacing(t.SP_SM)
             name = entry.get("name") or vm.pretty_slug(entry["slug"])
             h.addWidget(self._link(
@@ -1066,7 +1055,6 @@ class MarketView(QWidget):
         # in line with the title: re-read AlecaFrame and refresh the owned counts
         self.inv_refresh = QPushButton(" Refresh inventory")
         self.inv_refresh.setIcon(glyph_icon("refresh", color=t.TEXT))
-        self.inv_refresh.setProperty("size", "small")
         self.inv_refresh.setCursor(Qt.PointingHandCursor)
         self.inv_refresh.setToolTip(
             "re-read your AlecaFrame inventory and update the owned counts")
@@ -1095,9 +1083,7 @@ class MarketView(QWidget):
         self.tab_btns = {}
         for key, text in (("market", "Market"), ("contracts", "Contracts"),
                           ("watchlist", "Watchlist")):
-            b = QPushButton(text)
-            b.setProperty("kind", "flat")
-            b.setCursor(Qt.PointingHandCursor)
+            b = tab_button(text, TAB_ACCENTS.token(key))
             b.clicked.connect(lambda _c=False, k=key: self.select(k))
             self.tab_btns[key] = b
             bar.addWidget(b, 1)
@@ -1134,13 +1120,7 @@ class MarketView(QWidget):
         if hasattr(tab, "on_show"):     # a tab may freshen itself on the way in
             tab.on_show()
         for k, b in self.tab_btns.items():
-            active = k == key
-            b.setStyleSheet(
-                f"color: {t.TEXT if active else t.MUTED};"
-                f"border-bottom: {t.BORDER_W}px solid "
-                f"{TAB_ACCENTS[k] if active else t.BORDER};"
-                f"background: {t.TAB_BG if active else t.PANEL};"
-                "padding: 6px 18px;")
+            set_tab_active(b, k == key)
 
     def _refresh_inventory(self) -> None:
         """Drop the cached inventory and re-count the loaded item's owned total
@@ -1184,7 +1164,7 @@ class PostOrderDialog(QDialog):
         self.setModal(True)
         self.setMinimumWidth(t.DIALOG_MIN_W)  # §9: dialogs carry a stable min
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(t.SP_XL, t.SP_XL, t.SP_XL, t.SP_XL)
+        lay.setContentsMargins(*t.DIALOG_MARGINS)
         lay.setSpacing(t.SP_MD)
 
         nm = label(tab.name, role="h2")
@@ -1272,7 +1252,7 @@ class PostOrderDialog(QDialog):
         self._job = run(do, self._posted, self._failed)
 
     def _posted(self, _order_id) -> None:
-        self.tab._flash(f"{self.side} order posted ✔", "ok")
+        self.tab._flash(f"{self.side} order posted", "ok")
         self.tab.refresh()               # the new order lands in the book
         self.tab.view.on_posted()        # and freshens My Listings
         self.accept()

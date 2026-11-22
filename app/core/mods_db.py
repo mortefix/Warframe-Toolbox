@@ -403,8 +403,12 @@ def counts() -> dict:
 
 def run_select(sql: str, limit: int = 200) -> dict:
     """The demo query console: a single read-only SELECT/WITH statement.
-    The read-only connection is the real enforcement; this guard just gives
-    friendlier errors."""
+
+    `PRAGMA query_only` is the real enforcement; the prefix guard just gives
+    friendlier errors. mods.db itself is opened read-only, but the ATTACHED
+    player database is not - and a statement may start with WITH and still
+    write (`WITH x AS (...) DELETE FROM player.owned`), which this console
+    used to run. query_only refuses writes on every attached database."""
     stripped = sql.strip().rstrip(";")
     if ";" in stripped:
         return {"error": "one statement at a time", "cols": [], "rows": []}
@@ -412,6 +416,7 @@ def run_select(sql: str, limit: int = 200) -> dict:
         return {"error": "SELECT/WITH queries only", "cols": [], "rows": []}
     con = _mods_conn()
     try:
+        con.execute("PRAGMA query_only = ON")
         cur = con.execute(stripped)
         cols = [d[0] for d in cur.description or []]
         rows = [list(r) for r in cur.fetchmany(limit)]

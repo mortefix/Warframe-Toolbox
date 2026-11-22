@@ -22,6 +22,7 @@ retired and now 404.
 
 from __future__ import annotations
 
+import functools
 import json
 import threading
 import time
@@ -113,6 +114,28 @@ class Listing:
     #: Highest rank this item goes to, from /v2/item/<slug>. None until
     #: fetched; only ever fetched for goods that actually rank.
     max_rank: int | None = None
+
+
+def _parses(fn):
+    """Mark a method that reads fields out of an API response.
+
+    `_req` guarantees JSON, not a SHAPE: an API revision, an error envelope
+    served with a 200, or a proxy's own JSON page all parse fine and then
+    fail at the first `["data"]` as a KeyError/TypeError - which no caller
+    catches (they catch MarketError), or which reaches the user as the bare
+    text `'data'`. This turns every such miss into a MarketError that says
+    what actually happened."""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except (KeyError, TypeError, AttributeError, IndexError) as exc:
+            raise MarketError(
+                "warframe.market sent a response the Toolbox did not "
+                f"expect ({fn.__name__}: {type(exc).__name__}: {exc}). "
+                "Try again; if it keeps happening the API may have "
+                "changed.") from exc
+    return wrapper
 
 
 class MarketClient:
@@ -211,6 +234,7 @@ class MarketClient:
 
     # -- catalogue -------------------------------------------------------
 
+    @_parses
     def _items(self) -> dict[str, dict[str, str]]:
         # One MarketClient is shared by three worker threads (Market search,
         # My Listings, the Vosfor price sweep). The cache MUST be published only
@@ -236,6 +260,7 @@ class MarketClient:
                 self._items_by_id = built          # publish fully-built only
         return self._items_by_id
 
+    @_parses
     def account_id(self) -> str:
         if self._account_id is None:
             self._account_id = self._req("GET", "/v2/me")["data"]["id"]
@@ -270,6 +295,7 @@ class MarketClient:
                 return default
         return self._slug_names.get(slug, default)
 
+    @_parses
     def riven_weapons(self) -> list[tuple[str, str]]:
         """(name, slug) of every riven-capable weapon, sorted by name."""
         if self._riven_weapons is None:
@@ -280,6 +306,7 @@ class MarketClient:
                 for w in data if w.get("slug"))
         return self._riven_weapons
 
+    @_parses
     def lich_weapons(self) -> list[tuple[str, str]]:
         """(name, slug) of every lich/sister weapon, sorted by name."""
         if self._lich_weapons is None:
@@ -290,6 +317,7 @@ class MarketClient:
                 for w in data if w.get("slug"))
         return self._lich_weapons
 
+    @_parses
     def weapon_thumbs(self) -> dict[str, str]:
         """slug -> static thumb path for every riven-capable and lich weapon,
         cached for the session. This is what puts a picture on a contract
@@ -312,6 +340,7 @@ class MarketClient:
 
     # -- reads -----------------------------------------------------------
 
+    @_parses
     def my_listings(self) -> dict[str, list[Listing]]:
         """All your orders, split {"sell": [...], "buy": [...]}, resolved to
         item names and sorted by name."""
@@ -342,6 +371,7 @@ class MarketClient:
     def my_sell_orders(self) -> list[Listing]:
         return self.my_listings()["sell"]
 
+    @_parses
     def order_book(self, slug: str) -> dict[str, list[dict]]:
         """The public order book for one item, mirroring what warframe.market
         shows: {"sell": [rows, price ascending], "buy": [rows, descending]}.
@@ -374,6 +404,7 @@ class MarketClient:
 
     # -- contracts (WFM's auction house: rivens + liches, v1 API) ---------
 
+    @_parses
     def auctions(self, kind: str, weapon_slug: str,
                  ascending: bool = True) -> list[dict]:
         """Public contract search, as on warframe.market's Contracts page.
@@ -410,6 +441,7 @@ class MarketClient:
             })
         return rows
 
+    @_parses
     def my_auctions(self) -> list[dict]:
         """The current user's OWN riven/lich auctions - My Listings > Contracts.
         Rows match auctions()' shape (so vm.contract_row can format them) plus
@@ -473,6 +505,7 @@ class MarketClient:
         self._req("PUT", f"/v1/auctions/entry/{auction_id}",
                   {"visible": visible}, v1_auth=True)
 
+    @_parses
     def relist_auction(self, row: dict, *, starting: int | None,
                        buyout: int | None, mod_rank: int | None = None,
                        visible: bool = True) -> str:
@@ -534,6 +567,7 @@ class MarketClient:
         self._req("PUT", f"/v1/auctions/entry/{auction_id}/close",
                   v1_auth=True)
 
+    @_parses
     def _online_prices(self, slug: str, side: str, exclude: str,
                        rank: int | None = None,
                        subtype: str | None = None) -> list[int]:
@@ -591,6 +625,7 @@ class MarketClient:
             body["rank"] = rank
         self._req("PATCH", f"/v2/order/{order_id}", body)
 
+    @_parses
     def create_order(self, item_id: str, order_type: str, platinum: int,
                      quantity: int = 1,
                      visible: bool = True, rank: int | None = None,
@@ -611,6 +646,7 @@ class MarketClient:
         data = self._req("POST", "/v2/order", body)
         return (data.get("data") or {}).get("id", "")
 
+    @_parses
     def item_detail(self, slug: str) -> dict:
         """The full record for one item, cached for the session. The bulk
         /v2/items list does NOT carry maxRank, so this is the only way to
@@ -618,9 +654,14 @@ class MarketClient:
         hit = self._item_detail.get(slug)
         if hit is None:
             hit = self._req("GET", f"/v2/item/{slug}")["data"]
+            if not isinstance(hit, dict):
+                raise MarketError("warframe.market sent a response the "
+                                  "Toolbox did not expect (item_detail: "
+                                  "no item record).")
             self._item_detail[slug] = hit
         return hit
 
+    @_parses
     def max_rank(self, slug: str) -> int | None:
         """How far this item ranks, or None if it does not rank at all.
 

@@ -56,10 +56,7 @@ class SlideOver(QWidget):
         self.setAttribute(Qt.WA_StyledBackground, True)
         self._width = width
         self._open = False
-        self.setProperty("surface", "drawer")
-        self.setStyleSheet(
-            f"QWidget[surface=\"drawer\"] {{ background: {t.PANEL};"
-            f" border-left: {t.BORDER_W}px solid {t.BORDER}; }}")
+        self.setProperty("surface", "drawer")    # styled in ui/qss.py
 
         self.scrim = Scrim(parent)
         self.scrim.clicked.connect(self.close_panel)

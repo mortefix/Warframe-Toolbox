@@ -19,11 +19,13 @@ from .webapps import WEB_APPS, WEB_KEYS
 # Accents identify a card; they ride on the stripe and icon, never on the
 # button. A filled accent per card would put six saturated surfaces - one of
 # them gold - on the first screen of the app.
+# These are core.theme token NAMES, not colours: the front end resolves them
+# with theme.color() when it paints, so a live theme switch re-colours a card.
 ACCENTS = {
-    "listings": theme.ACCENT,          # My Listings IS the treasury: gold
-    "market": theme.WFM_TEAL,
-    "vosfor": theme.RARITY_BRONZE,     # bronze: dissolved dust
-    "web": theme.WEB_ACCENT,           # slate: "the webview is a lit pane" -
+    "listings": "ACCENT",              # My Listings IS the treasury: gold
+    "market": "WFM_TEAL",
+    "vosfor": "RARITY_BRONZE",         # bronze: dissolved dust
+    "web": "WEB_ACCENT",               # slate: "the webview is a lit pane" -
 }                                      # not gold (not money), not PLAT
 
 
@@ -31,7 +33,7 @@ class Card(NamedTuple):
     key: str
     name: str
     icon: str
-    accent: str
+    accent: str             # a core.theme colour token NAME (see ACCENTS)
     requires_session: bool
     exists: bool            # False for a tool whose script is missing
     blurb: str
@@ -97,7 +99,7 @@ def action_for(card: Card, linked: bool) -> Action:
     if card.requires_session and not linked:
         return Action("Link account first", "link", True)
     verb = "Visit" if card.key in WEB_KEYS else "Open"
-    return Action(f"{verb}  →", "open", True)
+    return Action(verb, "open", True)
 
 
 class PlayerStatus(NamedTuple):

@@ -12,10 +12,9 @@ changed is touched.
 
 from __future__ import annotations
 
-import threading
 import time
 
-from PySide6.QtCore import QObject, QTimer, Qt, Signal
+from PySide6.QtCore import QTimer, Qt, Signal
 from PySide6.QtWidgets import (QCheckBox, QFrame, QHBoxLayout, QLineEdit,
                                QPushButton, QScrollArea, QVBoxLayout, QWidget)
 
@@ -24,14 +23,9 @@ from core import theme as t
 from core import vosfor as core_vosfor
 from core import vosfor_vm as vm
 from core import wf_inventory
+from ui import work
 from ui.bridge import FetchBridge
 from ui.widgets import glyph_icon, label, panel, restyle
-
-
-class InventoryBridge(QObject):
-    """The AlecaFrame read runs on a worker thread; a queued signal carries
-    the result back without any of Tk's after(0, ...) plumbing."""
-    done = Signal(object)
 
 BAR_HEIGHT = 4
 COL_DROP = 70
@@ -221,7 +215,7 @@ class VosforView(QWidget):
         self._prices_at = pd.get("fetched_at")
         self._fetcher = None
         self._bridge = None
-        self._inv_bridge = None
+        self._inv_job = None
         self.owned = self.cached_mtime = None
         self.inv_stale = False
 
@@ -230,7 +224,7 @@ class VosforView(QWidget):
         self._bal_timer.timeout.connect(self._save_balance)
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(t.SP_SCREEN, t.SP_XL, t.SP_SCREEN, t.SP_XL)
+        outer.setContentsMargins(*t.PAGE_MARGINS)
         outer.setSpacing(t.SP_LG)
 
         head = QHBoxLayout()
@@ -241,7 +235,6 @@ class VosforView(QWidget):
         self.update_btn = QPushButton(" Update inventory")
         self.update_btn.setIcon(glyph_icon("refresh", color=t.TEXT))
         self.update_btn.setProperty("wide", "true")
-        self.update_btn.setProperty("size", "small")
         self.update_btn.setCursor(Qt.PointingHandCursor)
         self.update_btn.clicked.connect(lambda: self.refresh_inventory(True))
         head.addWidget(self.update_btn)
@@ -281,7 +274,6 @@ class VosforView(QWidget):
         self.price_btn = QPushButton(" Refresh prices")
         self.price_btn.setIcon(glyph_icon("refresh", color=t.TEXT))
         self.price_btn.setProperty("wide", "true")   # match "Update inventory"
-        self.price_btn.setProperty("size", "small")
         self.price_btn.setCursor(Qt.PointingHandCursor)
         self.price_btn.clicked.connect(self.fetch_prices)
         meth.addWidget(self.price_btn)
@@ -374,6 +366,15 @@ class VosforView(QWidget):
     def _save_balance(self) -> None:
         self._save_settings()
 
+    def hideEvent(self, event) -> None:
+        # The debounced balance write must not be lost when the page goes
+        # away with the timer still pending (tab switch, close to tray, a
+        # dropped page, app exit): flush it now.
+        if self._bal_timer.isActive():
+            self._bal_timer.stop()
+            self._save_balance()
+        super().hideEvent(event)
+
     def _toggle_method(self, key: str, on: bool) -> None:
         self.methods[key] = on
         self._settings["vosfor_methods"] = self.methods
@@ -390,23 +391,21 @@ class VosforView(QWidget):
         """Re-read AlecaFrame off the UI thread: a stale read is a full AES
         decrypt of the whole inventory, ~900 ms, which would freeze the app
         if it ran inline."""
-        if self._inv_bridge is not None:
+        if self._inv_job is not None:
             return                       # a read is already in flight
         self.update_btn.setEnabled(False)   # signal "working"; re-enabled when done
         self.src_lbl.setText("refreshing inventory…")
-        bridge = InventoryBridge()
-        self._inv_bridge = bridge
-        bridge.done.connect(self._inventory_ready)
+        # ui.work, not a bare thread: it keeps the Job alive until the worker
+        # finishes and reports a failure instead of swallowing it.
+        self._inv_job = work.run(
+            lambda: core_vosfor.refresh_inventory(force),
+            self._inventory_ready, self._inventory_failed)
 
-        def work():
-            try:
-                bridge.done.emit(core_vosfor.refresh_inventory(force))
-            except Exception:            # noqa: BLE001 - never kill the thread
-                bridge.done.emit(None)
-        threading.Thread(target=work, daemon=True).start()
+    def _inventory_failed(self, _msg: str) -> None:
+        self._inventory_ready(None)
 
     def _inventory_ready(self, result) -> None:
-        self._inv_bridge = None
+        self._inv_job = None
         self.update_btn.setEnabled(True)
         if result is None:
             self.src_lbl.setText("inventory read failed")

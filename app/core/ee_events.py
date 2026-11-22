@@ -77,17 +77,37 @@ def _parse_line(line: str) -> dict | None:
 def _load_state() -> dict:
     d = store.read(NAMESPACE)
     if isinstance(d, dict) and isinstance(d.get("events"), list):
+        sig = d.get("sig")
         return {
             "offset": int(d.get("offset") or 0),
             "log_size": int(d.get("log_size") or 0),
+            "sig": sig if isinstance(sig, str) else "",
             "events": d["events"],
         }
-    return {"offset": 0, "log_size": 0, "events": []}
+    return {"offset": 0, "log_size": 0, "sig": "", "events": []}
 
 
-def _save_state(offset: int, log_size: int, events: list) -> None:
+def _save_state(offset: int, log_size: int, events: list,
+                sig: str = "") -> None:
     store.write(NAMESPACE, {"offset": offset, "log_size": log_size,
-                            "events": events})
+                            "sig": sig, "events": events})
+
+
+#: How many bytes just before the read offset are remembered as the log's
+#: fingerprint (see tail()).
+SIG_BYTES = 64
+
+
+def _signature(path, offset: int) -> str:
+    """Hex of the bytes immediately before `offset` ("" when unreadable or at
+    the start of the file)."""
+    n = min(SIG_BYTES, offset)
+    if n <= 0:
+        return ""
+    try:
+        return wf_local.read_from_readonly(path, offset - n, n).hex()
+    except OSError:
+        return ""
 
 
 def tail(path=wf_local.EE_LOG,
@@ -101,9 +121,16 @@ def tail(path=wf_local.EE_LOG,
     if size is None:                       # log gone: keep what we have
         return state["events"]
 
-    offset, events = state["offset"], state["events"]
-    if size < offset:                      # rotated: a new session started
-        offset, events = 0, []
+    offset, events, sig = state["offset"], state["events"], state["sig"]
+    # Rotated (the game starts a fresh log every session)? A log SHORTER than
+    # our offset is the obvious case. The other is a new session that has
+    # already grown past the old offset: by size alone that looks like plain
+    # growth, and the tail would resume mid-file, keeping last session's
+    # events and skipping this one's opening lines. So the bytes just before
+    # the offset are remembered and compared - every line starts with a
+    # timestamp, so two sessions never match there.
+    if size < offset or (sig and _signature(path, offset) != sig):
+        offset, events, sig = 0, [], ""
 
     if size > offset:
         chunk = wf_local.read_from_readonly(path, offset,
@@ -114,8 +141,9 @@ def tail(path=wf_local.EE_LOG,
             if ev is not None:
                 events.append(ev)
         events = events[-MAX_EVENTS:]
+        sig = _signature(path, offset)
 
-    _save_state(offset, size, events)
+    _save_state(offset, size, events, sig)
     return events
 
 

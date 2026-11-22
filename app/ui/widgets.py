@@ -17,10 +17,11 @@ from PySide6.QtGui import (QBrush, QColor, QFont, QFontDatabase, QIcon,
                            QLinearGradient, QPainter, QPainterPath, QPen,
                            QPixmap, QPolygonF)
 from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QLabel,
-                               QWidget)
+                               QPushButton, QWidget)
 
 from core import assets
 from core import theme as t
+from ui import icons
 
 
 def alive(obj) -> bool:
@@ -98,6 +99,101 @@ class WrapLabel(QLabel):
     def sizeHint(self) -> QSize:
         w = min(self.width() or self._max_w, self._max_w)
         return QSize(w, self.heightForWidth(w))
+
+
+def icon_text(key: str, colour: str = "") -> str:
+    """One theme icon as RICH TEXT, to embed in a QLabel's own text:
+
+        qty.setText(f"{n} {icon_text('stack')}")
+
+    An icon inside a sentence used to be a dingbat typed into the string
+    ("3 ❒", "⚠ Low = 35p"). No themed text face has those glyphs, so the
+    character came from whatever symbol font the machine had. This draws it
+    from the bundled icon face instead - the same face, by the same
+    core.theme.ICONS key, as every stand-alone icon. Anything else spliced
+    into the same string must be escaped (html.escape) if it can contain
+    markup."""
+    style = f"font-family:'{icons.FAMILY}';"
+    if colour:
+        style += f" color:{colour};"
+    return f'<span style="{style}">{t.glyph(key)}</span>'
+
+
+class Dot(QWidget):
+    """A small filled status dot, PAINTED. It replaces the "●" character,
+    which no themed text face contains (see icon_text)."""
+
+    def __init__(self, colour: str = "", diameter: int = t.DOT_D,
+                 parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._colour = colour or t.MUTED
+        self._d = diameter
+        self.setFixedSize(diameter + 2, diameter + 2)
+
+    def colour(self) -> str:
+        return self._colour
+
+    def set_colour(self, colour: str) -> None:
+        if colour != self._colour:
+            self._colour = colour
+            self.update()
+
+    def paintEvent(self, _event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing, True)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(self._colour))
+        p.drawEllipse(QRectF(1, 1, self._d, self._d))
+
+
+def button_sheet(fg: str, *, pad: str, bg: str = "transparent",
+                 edge: str = "", hover_bg: str = "", hover_fg: str = "",
+                 disabled_bg: str = "", align: str = "") -> str:
+    """The style sheet for a hand-coloured QPushButton - WITH its states.
+
+    A button styled inline with bare declarations (`color: ...; background:
+    ...`) looks identical hovered and disabled: a widget's own sheet outranks
+    the application sheet's `:hover` and `:disabled` rules whatever their
+    specificity, so Qt never gets to show either state. Every hand-coloured
+    button in the app goes through this instead, which spells the states out
+    once:
+
+      hover     the fill steps to PANEL_HI (or `hover_bg`; pass the button's
+                own fill for "no change", or "transparent" plus `hover_fg`
+                for a text link)
+      disabled  the ink drops to INK_FAINT, a coloured edge to BORDER, and a
+                filled button takes `disabled_bg`
+
+    `pad` is the CSS padding and is the caller's: this helper decides how a
+    button REACTS, not how big it is."""
+    border = f"{t.CTRL_BORDER_W}px solid {edge}" if edge else "none"
+    base = (f"color: {fg}; background: {bg}; border: {border};"
+            f" padding: {pad};" + (f" text-align: {align};" if align else ""))
+    hover = f"background: {hover_bg or t.PANEL_HI};" + \
+        (f" color: {hover_fg};" if hover_fg else "")
+    disabled = f"color: {t.INK_FAINT};" + \
+        (f" border-color: {t.BORDER};" if edge else "") + \
+        (f" background: {disabled_bg};" if disabled_bg else "")
+    return (f"QPushButton {{ {base} }}"
+            f"QPushButton:hover {{ {hover} }}"
+            f"QPushButton:disabled {{ {disabled} }}")
+
+
+def tab_button(text: str, accent: str) -> QPushButton:
+    """One tab of a tab strip. All of its looks are style-sheet rules
+    (QPushButton[tab="true"] in ui/qss.py); `accent` is the core.theme colour
+    token NAME its bottom edge takes while it is the active tab."""
+    b = QPushButton(text)
+    b.setProperty("tab", "true")
+    b.setProperty("accent", accent)
+    b.setProperty("active", "false")
+    b.setCursor(Qt.PointingHandCursor)
+    return b
+
+
+def set_tab_active(button: QPushButton, active: bool) -> None:
+    button.setProperty("active", "true" if active else "false")
+    restyle(button)
 
 
 def hairline(parent: QWidget | None = None) -> QFrame:
@@ -261,11 +357,13 @@ class Dropdown(QComboBox):
 
     Once a style sheet touches QComboBox, Qt stops drawing its native
     down-arrow and there is no way to put one back without shipping an image.
-    So the ▾ is painted directly - the same glyph the Tk `arrow_dropdown`
-    helper used, from the same theme constant.
+    So the arrow is painted directly - as a triangle, not as the "▾"
+    character it used to be: no themed text face has that glyph, so its shape
+    and size depended on the machine's fallback font.
     """
 
     ARROW_PAD = 18
+    ARROW_W, ARROW_H = 7, 4
 
     def __init__(self, items=(), parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -275,9 +373,14 @@ class Dropdown(QComboBox):
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
         p = QPainter(self)
-        p.setPen(QColor(t.MUTED))
-        p.drawText(self.rect().adjusted(0, 0, -6, 0),
-                   Qt.AlignRight | Qt.AlignVCenter, t.ARROW_OPEN)
+        p.setRenderHint(QPainter.Antialiasing, True)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(t.MUTED))
+        right = self.width() - 6
+        top = (self.height() - self.ARROW_H) / 2
+        p.drawPolygon(QPolygonF([
+            QPointF(right - self.ARROW_W, top), QPointF(right, top),
+            QPointF(right - self.ARROW_W / 2, top + self.ARROW_H)]))
 
 
 class Finial(QWidget):

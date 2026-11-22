@@ -12,34 +12,42 @@ Nothing here is machine-specific: paths come from this file's location, the
 game is detected by its own executable name, and the Toolbox by its window
 title - the folder can be copied to any Windows PC and this still works.
 
-It exits on its own when the setting is turned off (settings are re-read
-every poll) and refuses to run twice (named mutex).
+The HKCU Run entry is the single source of truth. The watcher keeps running
+only while that entry exists AND names this very file (re-checked every
+poll), so it exits on its own when the option is turned off, when the entry
+is removed from outside the app, or when another copy of the Toolbox takes
+the entry over. It used to read a settings file instead - which meant an
+entry written by anything but this copy's Settings page (the installer, a
+repair) started a watcher that quit immediately. It refuses to run twice
+(named mutex).
 """
 
 import ctypes
-import json
+import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent          # the app/ folder
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))               # HKCU Run gives us no cwd
-from core import paths as _paths                # stdlib-only leaf - safe here
-
-SETTINGS = _paths.USERDATA / "wfm_settings.json"
+ME = Path(__file__).resolve()
+ROOT = ME.parent                                # the app/ folder
 TOOLBOX = ROOT.parent / "Warframe Toolbox.pyw"  # launcher lives in the root
 APP_TITLE = "Warframe Toolbox"
 POLL_SEC = 15
+# Duplicated from core.config on purpose: this file stays dependency-free.
+RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+RUN_NAME = "WarframeToolboxWatcher"
 
 
 def enabled() -> bool:
+    """Is the Run entry registered, and registered as THIS file?"""
     try:
-        return bool(json.loads(SETTINGS.read_text(encoding="utf-8"))
-                    .get("launch_with_warframe"))
-    except (OSError, ValueError):
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as k:
+            cmd, _ = winreg.QueryValueEx(k, RUN_NAME)
+    except OSError:
         return False
+    return os.path.normcase(str(ME)) in os.path.normcase(str(cmd))
 
 
 def warframe_running() -> bool:
@@ -54,7 +62,24 @@ def warframe_running() -> bool:
 
 
 def toolbox_open() -> bool:
-    return bool(ctypes.windll.user32.FindWindowW(None, APP_TITLE))
+    """A top-level QT window titled like the app. The title alone is not
+    enough: an Explorer window showing the "Warframe Toolbox" folder has the
+    same caption, and would stop the Toolbox from ever being launched."""
+    user32 = ctypes.windll.user32
+    user32.FindWindowExW.restype = ctypes.c_void_p
+    user32.FindWindowExW.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
+                                     ctypes.c_wchar_p, ctypes.c_wchar_p]
+    user32.GetClassNameW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p,
+                                     ctypes.c_int]
+    buf = ctypes.create_unicode_buffer(256)
+    hwnd = None
+    while True:
+        hwnd = user32.FindWindowExW(None, hwnd, None, APP_TITLE)
+        if not hwnd:
+            return False
+        user32.GetClassNameW(hwnd, buf, 256)
+        if buf.value.startswith("Qt"):          # e.g. Qt6110QWindowIcon
+            return True
 
 
 def launch_toolbox() -> None:
@@ -71,9 +96,14 @@ def launch_toolbox() -> None:
 
 def main() -> None:
     # single instance: a named mutex, cleaned up by the OS on exit
-    ctypes.windll.kernel32.CreateMutexW(None, False,
-                                        "Local\\WarframeToolboxWatcher")
-    if ctypes.windll.kernel32.GetLastError() == 183:   # ERROR_ALREADY_EXISTS
+    # use_last_error: ctypes makes other API calls between ours, so a bare
+    # GetLastError() afterwards reads whatever THEY left behind - the
+    # "already running" check could miss and two watchers would both launch.
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateMutexW.restype = ctypes.c_void_p
+    handle = kernel32.CreateMutexW(None, False,
+                                   "Local\\WarframeToolboxWatcher")
+    if not handle or ctypes.get_last_error() == 183:   # ERROR_ALREADY_EXISTS
         return
     while True:
         if not enabled():

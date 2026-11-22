@@ -55,6 +55,14 @@ PROFILE_FALLBACK = (
     "Settings > Data > Warframe."
 )
 PROFILE_DONE = "Account ID captured - you're connected."
+#: The rail's success line (bottom left, beside Back): what worked, and what
+#: to do now. The page's own note sits above a full-height web view and is
+#: easy to miss, so the step used to end with no visible sign it had worked.
+PROFILE_SUCCESS = "Profile connected. Press Next."
+#: Shown in the same place until then, so the page never looks finished
+#: before the account ID has actually been read.
+PROFILE_WAITING = "Waiting for sign-in…"
+MARKET_SUCCESS = "Linked as {name}. Press Next."
 
 MARKET_TITLE = "Link your warframe.market account"
 MARKET_BODY = (

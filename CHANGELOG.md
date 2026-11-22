@@ -8,7 +8,42 @@ The current version always lives in `app/core/version.py`.
 
 ## [Unreleased]
 
+### Added
+- Installer: a "Open the Toolbox automatically when Warframe starts" option,
+  ticked by default on a first install, so the feature works straight after
+  setup. Re-running Setup shows whatever it is currently set to.
+
 ### Changed
+- Setup wizard: when the Warframe.com or warframe.market step succeeds, a
+  green line beside the Back button says so and tells you to press Next.
+- "Launch the Toolbox when Warframe starts" now follows the Windows startup
+  entry alone. The background watcher keeps running only while that entry
+  points at its own copy of the app, so an entry written by the installer
+  (or repaired after a folder move) works without also flipping a setting.
+  When an installed copy and a second copy of the Toolbox share a PC, the
+  installed copy takes the entry over the next time it starts, and the
+  checkboxes in Settings show whether the entry belongs to the copy you are
+  looking at. Turning the option off in one copy no longer removes another
+  copy's entry.
+- Updates are applied more carefully. The app now downloads first and then
+  fast-forwards its files in a separate, local step, and loads every screen
+  from the old version before any file changes - so a tab you open after an
+  update landed can no longer mix new code into the running session.
+- Windows' "Installed apps" list shows the Toolbox's real version (it showed
+  the bundled Python's, 3.11.9) and keeps it current after each self-update.
+- Every screen's title now sits in the same place (Home, Vosfor and the
+  DevTools pages sat a few pixels lower or further in than the rest), the
+  setup wizard's text lines up with its button row, and the Warframe.com
+  sign-in window uses the same padding as every other dialog.
+- Buttons with their own colours (the outlined card buttons, the Settings
+  and web-app buttons, the status chips) now show a hover state and look
+  disabled when they are.
+- Buttons and text fields are one height everywhere (26px; they were a mix
+  of 24, 26, 28 and 30) and outlined buttons share one look.
+- Small marks that were typed as symbols - the stock mark after a quantity,
+  the undercut warning, reputation arrows, status dots, the dropdown arrow -
+  are now drawn by the app instead of borrowed from a Windows symbol font,
+  so they look the same on every PC.
 - Mods database refreshed for Update 44 "Iceblade of Narin": the four new
   Warframe augments join their syndicate lists - Brood's Oversurge (Oraxia,
   Cephalon Suda / New Loka), Infernum (Uriel, Steel Meridian / Perrin
@@ -24,6 +59,64 @@ The current version always lives in `app/core/version.py`.
   from the Public Export it syncs on its own.
 
 ### Fixed
+- Connecting your Warframe.com profile never completed: the website removed
+  the page the Toolbox read your account ID from, so the wizard and
+  Settings sat on a signed-in page for ever and Home's Profile light stayed
+  off. The ID is now read from the signed-in site directly, within a few
+  seconds. The "Get ID manually" button, which opened that same dead page,
+  is gone.
+- Dialogs were unreadable when Windows' light/dark setting disagreed with the
+  theme. The setup wizard, the sign-in form, every confirmation and error
+  box and the tray menu took their background from Windows instead of from
+  the theme - so a dark theme on light-mode Windows (or a light theme on
+  dark-mode Windows) drew pale text on a pale window. They are themed now,
+  as is the DevTools mod table.
+- Switching theme no longer leaves pieces in the old theme's colours until a
+  restart: the status chips, Home card accents, the My Listings and Market
+  tab edges, the WTS/WTB badges and the order book's status dots all follow
+  the switch at once.
+- Mods: the top border of the collection area no longer disappears while
+  the shade slides open or closed.
+- Christmas Light: text fields, dropdowns and checkboxes get the green trim
+  the theme was designed with (they were taking the red frame colour).
+- Updates: if installing a new dependency failed (offline, antivirus), it
+  was never tried again and the app could be left unable to start. It is
+  now retried on every launch until it succeeds. A stalled connection can
+  no longer interrupt an update halfway through and leave the app refusing
+  all later updates, and git can no longer sit waiting for a password that
+  nobody can see.
+- "Delete ALL user data" left your mod collection, the cached mastery rank
+  and the mastery badge images behind. All three are now listed on
+  Settings > Data > WF Toolbox and removed by the wipe, and the wipe tells
+  you if the embedded browser's profile could not be cleared instead of
+  reporting success.
+- Mods: the developer query console could change your collection. A
+  statement that starts with WITH can still delete or update, and the
+  console ran it; it is now strictly read-only.
+- My Listings: sorting by "Market best", high to low, put every listing
+  whose market price had not loaded yet at the top. They stay at the bottom
+  in both directions.
+- Presence: switching status while connected could freeze the window for a
+  moment and sent the status twice; and when a connection failed instantly
+  the toggle could stay on "connecting..." for ever.
+- "Launch the Toolbox when Warframe starts" did nothing while an Explorer
+  window showing a folder named "Warframe Toolbox" was open - the watcher
+  mistook it for the app. Two watchers could also start side by side.
+- warframe.market replies in an unexpected shape now produce a readable
+  error instead of a blank screen or the bare text 'data'.
+- Game log: a new Warframe session whose log had already grown past the
+  point the last one ended at was not recognised as new, so the previous
+  session's events were kept and the new one's first lines skipped.
+- Vosfor: a platinum balance typed just before leaving the page or closing
+  the app could be lost; a corrupt price cache (`"prices": null`) could
+  never repair itself; and a failed inventory read now reports as failed.
+- Mods: veiled rivens no longer appear as blank riven cards, and a card
+  image that cannot be saved (disk full, file locked) is skipped instead of
+  breaking the whole batch.
+- Settings and the saved session are written through per-process temporary
+  files, so two saves landing together cannot corrupt either one.
+- Screens that were closed while a background request was still running
+  (unlinking, wiping data, switching theme) no longer receive its result.
 - Mods: Inaros's Scarab Shell augment showed as "Negation Swarm", the name
   it lost in Update 35.5 - the wiki keeps BOTH names for a renamed mod under
   one id, and the build picked between them by alphabetical accident. DE's

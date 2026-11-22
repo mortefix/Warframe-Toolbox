@@ -59,9 +59,10 @@ def counterpart_verb(side: str) -> str:
     return "buy" if side == "sell" else "sell"
 
 
-def status_dot(status: str) -> tuple[str, str]:
-    """('●', role) for a warframe.market user status."""
-    return "●", {"ingame": "ingame", "online": "ok"}.get(status, "muted")
+def status_role(status: str) -> str:
+    """The ROLE (never a colour) of a warframe.market user status. The front
+    end paints it as a dot (ui.widgets.Dot)."""
+    return {"ingame": "ingame", "online": "ok"}.get(status, "muted")
 
 
 class Scope(NamedTuple):
@@ -139,7 +140,7 @@ class Reputation(NamedTuple):
     a quantity - the arrow already carries the sign, so the count can stay in
     the ordinary muted grey the rest of the row uses.
     """
-    arrow: str
+    arrow: str         # a core.theme.ICONS key: "up" / "down" ("" = none)
     value: str
     role: str          # for the arrow only
 
@@ -153,9 +154,9 @@ def reputation(row: dict) -> Reputation:
     verdict either way, so the row stays clean."""
     rep = row.get("reputation") or 0
     if rep > 0:
-        return Reputation("↑", str(rep), "rep_up")
+        return Reputation("up", str(rep), "rep_up")
     if rep < 0:
-        return Reputation("↓", str(abs(rep)), "rep_down")
+        return Reputation("down", str(abs(rep)), "rep_down")
     return Reputation("", "", "muted")
 
 
@@ -230,7 +231,7 @@ def toggle_contract_watch(entries: list[dict], kind: str, slug: str,
 
 def watch_label(watched: bool) -> tuple[str, str]:
     """A watched item is gilded, not warned about."""
-    return ("★ Watched", "accent") if watched else ("☆ Watch", "muted")
+    return ("Watched", "accent") if watched else ("Watch", "muted")
 
 
 def toggle_watch(watchlist: list[str], slug: str) -> list[str]:
@@ -270,7 +271,7 @@ def sort_label(ascending: bool) -> str:
     # Spelled out, like My Listings' sort control: a bare ▲/▼ is ambiguous
     # (does the arrow mean the direction pressed, or the resulting order?), so
     # the control names the order it actually produces.
-    return "price low → high" if ascending else "price high → low"
+    return "price low to high" if ascending else "price high to low"
 
 
 def contracts_summary(n: int, kind: str, weapon: str, cap: int) -> str:

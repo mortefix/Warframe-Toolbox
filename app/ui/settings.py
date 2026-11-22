@@ -37,8 +37,8 @@ from core import wf_local
 from core import wf_profile
 from registry import TOOLS
 from ui import work
-from ui.widgets import (Dropdown, WrapLabel, glyph_icon, hairline, label,
-                        panel, restyle)
+from ui.widgets import (Dropdown, WrapLabel, button_sheet, glyph_icon,
+                        hairline, label, panel, restyle)
 
 #: (section label, [(page key, page label), ...]).
 #:
@@ -66,11 +66,9 @@ TREE = sorted(((section, sorted(pages, key=lambda kv: kv[1].lower()))
 
 NAV_WIDTH = 168
 LABEL_COL = 190
-#: Bottom inset for the explorer column. MUST match ui.app.NAV_RAIL_MARGIN (the
-#: main navbar's bottom margin) so the bottom-pinned About link lines up exactly
-#: with the bottom-pinned Settings row across the two columns - measured 8px too
-#: low without it, since the explorer otherwise sits flush to the window bottom.
-_NAV_BOTTOM = 8
+#: Bottom inset for the explorer column: the sidebar rail's own margin, so the
+#: bottom-pinned About link lines up exactly with the rail's Settings row.
+_NAV_BOTTOM = t.NAV_RAIL_MARGIN
 
 
 class GoodbyeDialog(QDialog):
@@ -90,7 +88,7 @@ class GoodbyeDialog(QDialog):
         self.setModal(True)
         self.setMinimumWidth(t.DIALOG_MIN_W)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(t.SP_XL, t.SP_XL, t.SP_XL, t.SP_XL)
+        lay.setContentsMargins(*t.DIALOG_MARGINS)
         lay.setSpacing(t.SP_MD)
         head = label(title, role="h2")
         head.setStyleSheet(f"color: {t.WFM_RED};")
@@ -114,11 +112,9 @@ class GoodbyeDialog(QDialog):
         # returnPressed in the field also fires it, but only when it is enabled
         self.entry.returnPressed.connect(
             lambda: self.ok.isEnabled() and self.ok.click())
-        self.ok.setStyleSheet(
-            f"QPushButton {{ background: {t.WFM_RED_DIM}; color: {t.TEXT};"
-            f" padding: 5px 16px; border: none; }}"
-            f"QPushButton:disabled {{ background: {t.PANEL};"
-            f" color: {t.WFM_EDGE}; }}")
+        self.ok.setStyleSheet(button_sheet(
+            t.TEXT, pad=t.BTN_PAD_WIDE, bg=t.WFM_RED_DIM,
+            hover_bg=t.TITLEBAR_CLOSE, disabled_bg=t.TAB_BG))
         self.ok.clicked.connect(self.accept)
         row.addWidget(self.ok)
         lay.addLayout(row)
@@ -181,8 +177,7 @@ class Page(QWidget):
         area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         inner = panel()
         self.body = QVBoxLayout(inner)
-        self.body.setContentsMargins(t.SP_SCREEN, t.SP_LG, t.SP_SCREEN,
-                                     t.SP_LG)
+        self.body.setContentsMargins(*t.PAGE_HEADER_MARGINS)
         # ONE gap between sections, everywhere. Explanatory text lives
         # INSIDE the card it explains, so the page is a stack of evenly
         # spaced boxes rather than boxes separated by stray paragraphs.
@@ -289,16 +284,14 @@ class Page(QWidget):
         b = QPushButton(text)
         if icon:
             b.setIcon(glyph_icon(icon, color=colour or t.TEXT))
-        b.setProperty("size", "small")
         b.setCursor(Qt.PointingHandCursor)
         if danger:
-            b.setStyleSheet(
-                f"QPushButton {{ background: {t.WFM_RED_DIM}; color: {t.TEXT};"
-                f" border: none; padding: 5px 14px; }}")
+            b.setStyleSheet(button_sheet(
+                t.TEXT, pad=t.BTN_PAD_WIDE, bg=t.WFM_RED_DIM,
+                hover_bg=t.TITLEBAR_CLOSE, disabled_bg=t.TAB_BG))
         elif colour:
-            b.setStyleSheet(f"color: {colour}; background: transparent;"
-                            f"border: {t.CTRL_BORDER_W}px solid {t.BORDER};"
-                            f"padding: 4px 12px;")
+            b.setStyleSheet(button_sheet(colour, pad=t.BTN_PAD_EDGED,
+                                         edge=colour))
         b.clicked.connect(on_click)
         return b
 
@@ -527,7 +520,7 @@ class WarframePage(Page):
                    "profile (mastery rank, loadout, progression) straight "
                    "from Warframe's own servers — no login, no game files, "
                    "no AlecaFrame. Connect to grab it automatically, or paste "
-                   "it from warframe.com/api/user-data.")
+                   "it in if you already have it.")
 
         self.bound_keys.add("wf_account_id")
         row = QHBoxLayout()
@@ -547,7 +540,6 @@ class WarframePage(Page):
 
         btns = QHBoxLayout()
         btns.addWidget(self.button("Connect Warframe.com…", self._connect_wf))
-        btns.addWidget(self.button("Get ID manually", self._open_user_data))
         btns.addWidget(self.button("Run setup wizard…",
                                    self.view.run_setup_wizard))
         btns.addStretch(1)
@@ -585,12 +577,6 @@ class WarframePage(Page):
         else:
             self.account_note.setText("Stored ID looks malformed.")
 
-    def _open_user_data(self) -> None:
-        """Open the page that shows the id, for a manual copy-paste."""
-        import webbrowser
-        webbrowser.open("https://www.warframe.com/api/user-data")
-        self.say("sign in, then copy \"user_id\" into the box above")
-
     def _connect_wf(self) -> None:
         """Auto-capture the account id via an embedded warframe.com login. Falls
         back to the manual route if the web engine can't be brought up (either
@@ -600,7 +586,10 @@ class WarframePage(Page):
             from ui.wf_connect import ConnectWarframeDialog
             dlg = ConnectWarframeDialog(self, self._captured_account)
         except Exception:                                   # noqa: BLE001
-            self._open_user_data()
+            # (There is no manual route to send people to any more: the page
+            # that used to show the id, warframe.com/api/user-data, is gone.)
+            self.say("couldn't open the Warframe.com sign-in - paste your "
+                     "account ID in the box above if you have it", "warn")
             return
         dlg.exec()
 
@@ -868,7 +857,8 @@ class MarketPage(Page):
             client.my_listings,
             lambda b: self.rows["Active orders"].setText(
                 f"{len(b['sell'])} WTS · {len(b['buy'])} WTB"),
-            lambda msg: self.rows["Active orders"].setText(msg)))
+            lambda msg: self.rows["Active orders"].setText(msg),
+            owner=self))
 
     def _unlink(self) -> None:
         if not GoodbyeDialog.confirmed(
@@ -941,7 +931,7 @@ class ToolboxPage(Page):
         self.files_box = self.box("Your data")
         self.blurb(self.files_box,
                    "Everything this app has written. Click a name to "
-                   "open it; the ✕ deletes just that file.")
+                   "open it; the × beside it deletes just that file.")
         self.file_host = QVBoxLayout()
         self.file_host.setSpacing(t.SP_XXS)
         self.files_box.addLayout(self.file_host)
@@ -1012,8 +1002,9 @@ class ToolboxPage(Page):
         open_btn.setMinimumWidth(210)
         open_btn.setCursor(Qt.PointingHandCursor)
         open_btn.setToolTip(f"{desc}\n{path}")
-        open_btn.setStyleSheet(f"color: {t.WFM_TEAL}; text-align: left;"
-                               f"background: transparent; padding: 3px 2px;")
+        open_btn.setStyleSheet(button_sheet(
+            t.WFM_TEAL, pad="3px 2px", align="left",
+            hover_bg="transparent", hover_fg=t.TEXT))
         open_btn.clicked.connect(lambda _c=False, p=path: self._open(p))
         h.addWidget(open_btn)
         h.addWidget(label(desc, role="small"), 1)
@@ -1079,9 +1070,11 @@ class ToolboxPage(Page):
                 "startup entries will be turned off.\n\nThe Toolbox itself "
                 "and its program assets are not affected."):
             return
-        self.view.wipe_everything()
+        complete = self.view.wipe_everything() is not False
         self.on_show()
-        self.say("all user data deleted")
+        self.say("all user data deleted" if complete else
+                 "user data deleted, but the web-app profile could not be "
+                 "cleared - restart the Toolbox and use Clear ALL web data")
 
 
 #: The version string lives in core.version; this is just the local alias.
@@ -1138,7 +1131,7 @@ class AboutPage(QWidget):
         self.view = view
         self.setAttribute(Qt.WA_StyledBackground, True)
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(t.SP_SCREEN, t.SP_LG, t.SP_SCREEN, t.SP_LG)
+        outer.setContentsMargins(*t.PAGE_HEADER_MARGINS)
         outer.setSpacing(t.SP_LG)
         outer.addWidget(label("About", role="h1"))
 
@@ -1378,11 +1371,9 @@ class SettingsView(QWidget):
 
     def _leaf(self, key: str, text: str) -> QPushButton:
         b = QPushButton(text)
-        b.setProperty("nav", "leaf")
+        b.setProperty("nav", "leaf")         # styled in ui/qss.py
+        b.setProperty("active", "false")
         b.setCursor(Qt.PointingHandCursor)
-        b.setStyleSheet(f"text-align: left; padding: 5px 8px 5px 34px;"
-                        f"border: none; background: transparent;"
-                        f"color: {t.MUTED};")
         b.clicked.connect(lambda _c=False, k=key: self.select(k))
         return b
 
@@ -1541,11 +1532,8 @@ class SettingsView(QWidget):
             if key in [k for k, _t in pages]:
                 self._set_open(section)
         for k, b in self.leaves.items():
-            active = k == key
-            b.setStyleSheet(
-                f"text-align: left; padding: 5px 8px 5px 34px; border: none;"
-                f"background: {t.SIDEBAR_ACTIVE if active else 'transparent'};"
-                f"color: {t.TEXT if active else t.MUTED};")
+            b.setProperty("active", "true" if k == key else "false")
+            restyle(b)
         # the bottom-pinned About link is not a leaf, so it carries its own
         # full-row active tint
         self.about_btn.setStyleSheet(self._about_style(key == "about"))
@@ -1573,8 +1561,9 @@ class SettingsView(QWidget):
         self.bookmarks_cleared.emit()
         self.shell.bookmarks_changed()
 
-    def wipe_everything(self) -> None:
-        self.shell.wipe_user_data()
+    def wipe_everything(self):
+        """False when part of the wipe failed (see Shell.wipe_user_data)."""
+        return self.shell.wipe_user_data()
 
     def run_setup_wizard(self) -> None:
         # getattr: test FakeShells predate the wizard (same pattern as the

@@ -96,17 +96,18 @@ class DevView(QWidget):
         outer.setSpacing(0)
 
         head = QHBoxLayout()
-        head.setContentsMargins(t.SP_SCREEN, t.SP_XL, t.SP_SCREEN, t.SP_MD)
+        head.setContentsMargins(*t.PAGE_HEADER_MARGINS)
         head.setSpacing(t.SP_MD)
+        # title FIRST, so it starts at the same x as every other screen's; the
+        # page's icon trails it
+        head.addWidget(label(self.TITLE, role="h1"))
         if self.ICON:
             icon = label(t.glyph(self.ICON), role="icon")
             head.addWidget(icon)
-        head.addWidget(label(self.TITLE, role="h1"))
         self.freshness = label("", role="small")
         head.addWidget(self.freshness)
         head.addStretch(1)
         self.refresh_btn = QPushButton("Refresh")
-        self.refresh_btn.setProperty("size", "small")
         self.refresh_btn.setCursor(Qt.PointingHandCursor)
         self.refresh_btn.clicked.connect(self._on_refresh)
         head.addWidget(self.refresh_btn)

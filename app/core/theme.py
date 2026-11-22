@@ -1,9 +1,9 @@
 """The "Orokin Treasury" design system, as data - no toolkit imports.
 
 Every colour, spacing step and font role the app draws with lives here and
-ONLY here. The Tk front end re-exports these names so its 638 per-widget
-`bg=`/`fg=` kwargs keep working unchanged; the PySide6 front end generates a
-QSS sheet from the same constants. One source of truth, two renderers.
+ONLY here. The PySide6 front end generates its QSS sheet from these
+constants (ui/qss.py). The module stayed toolkit-free from the days it also
+fed a Tkinter front end, and that is still what keeps it testable headless.
 
 Nothing in this module may import tkinter, PySide6, or anything else that
 knows how a pixel gets drawn. Fonts are declared as (family-preference,
@@ -68,6 +68,18 @@ RADIUS_HANDLE = 3            # the ONLY non-zero corner radius (scrollbar handle
 ICON_BTN = 28                # standard icon-button width: the contract-card,
                              # market-row and web-tab chrome buttons. (The My
                              # Listings item card has its OWN icon size, below.)
+# Button padding. With the body face's 18px line these make EVERY single-line
+# control CONTROL_H tall: 18 + 2*4 for a plain button, 18 + 2*3 + 2*1 for one
+# with a 1px edge (money, outlined), and the text field's own 20 + 2*2 + 2*1.
+BTN_PAD_V = 4                # vertical padding, no border
+BTN_PAD_V_EDGED = 3          # vertical padding beside a CTRL_BORDER_W border
+BTN_PAD_H = 10               # horizontal padding
+BTN_PAD_H_WIDE = 14          # a roomier primary-of-its-row button
+BTN_PAD = f"{BTN_PAD_V}px {BTN_PAD_H}px"
+BTN_PAD_WIDE = f"{BTN_PAD_V}px {BTN_PAD_H_WIDE}px"
+BTN_PAD_EDGED = f"{BTN_PAD_V_EDGED}px {BTN_PAD_H}px"
+BTN_PAD_EDGED_WIDE = f"{BTN_PAD_V_EDGED}px {BTN_PAD_H_WIDE}px"
+FIELD_INNER_H = 20           # a text field's content height (26 with pad + edge)
 CONTROL_H = 26               # shared control/button HEIGHT - the base every item-
                              # card button inherits, and the reference height for
                              # buttons elsewhere. Logical px, DPI-invariant.
@@ -75,6 +87,10 @@ REMOVE_BTN = (24, 22)        # small remove/close button (w, h)
 DISCLOSURE_W = 20            # disclosure-arrow column width
 TABLE_ROW_H = 26             # market table row height
 DIALOG_MIN_W = 460           # every dialog's minimum width
+DOT_D = 8                    # painted status dot (header, order book, legend)
+NAV_RAIL_MARGIN = 8          # inset of the sidebar rail's content from its edges,
+                             # and the gap between its groups; the Settings tree
+                             # pins its About link with the same number
 WEIGHT_BOLD = "bold"         # qss font-weight: the listing badge label
 WEIGHT_SEMI = 600            # qss font-weight: the money button
 
@@ -82,8 +98,13 @@ WEIGHT_SEMI = 600            # qss font-weight: the money button
 # Composed of the SP_* scale; centralised so a page's rhythm has ONE definition
 # rather than the same tuple retyped in every view.
 PAGE_HEADER_MARGINS = (SP_SCREEN, SP_LG, SP_SCREEN, SP_LG)  # a screen's header row
+# A screen that is ONE column (title, then content, in a single layout): the
+# header row's top and gutters, so its title sits exactly where a two-part
+# screen's does, with the looser SP_XL under the last block.
+PAGE_MARGINS = (SP_SCREEN, SP_LG, SP_SCREEN, SP_XL)
 PAGE_HOLDER_MARGINS = (SP_SCREEN, 0, SP_SCREEN, SP_XL)      # scroll-holder gutters
 TOP_GAP_MARGINS = (0, SP_LG, 0, 0)                          # gap under a tab bar
+DIALOG_MARGINS = (SP_XL, SP_XL, SP_XL, SP_XL)               # every dialog's padding
 
 # ---- palette (all contrast ratios verified >= 4.5:1 for text on its bg) ----
 BG = "#1b1915"             # content background - warm void-black lacquer
@@ -92,10 +113,12 @@ ICON_BG = "#0c0b08"        # item-image backdrop, deepest black in the app
 ROW_ALT = "#211d16"        # zebra stripe - a whisper lighter and warmer
 FIELD_BG_IN = "#262117"    # input fields inside dark tab containers
 FIELD_BG_OUT = "#1f1b14"   # input fields elsewhere (panels, dialogs)
-FIELD_EDGE = "#55482c"     # 1px dim-gold inlay border on every input
+FIELD_EDGE = "#37301f"     # the edge of every form control: text fields,
+                           # dropdowns (and their lists), check/radio boxes.
+                           # Same value as BORDER here, so Orokin Dark frames
+                           # and fields share one inlay; a theme may split them
 PANEL = "#26221a"          # raised panel surface
 PANEL_HI = "#322c20"       # highlighted panel / secondary button / hover
-TITLEBAR_BG = "#0f0e0b"    # cabinet lid - darkest chrome
 TITLEBAR_HOVER = "#2a251b"
 TITLEBAR_CLOSE = "#8c3125"  # deep lacquered red (also the danger-button bg)
 HEADER_BG = "#201c16"
@@ -131,24 +154,30 @@ GOLD_HI = "#e4c882"        # bright gold: finial tip, primary-btn hover, caret
 GOLD_DIM = "#7a693e"       # filigree hairlines / inlay strokes - NEVER text
 GOLD_FAINT = "#2a2413"     # faint gold wash: selection bg on black surfaces
 PLAT = "#cdd5da"           # platinum numerals - cool silver, matches the gem
-HAIRLINE = "#2e2818"       # 1px neutral separators between shell regions
 SCRIM = "rgba(0, 0, 0, 110)"   # dimming behind a slide-over drawer
+#: Colour tokens that deliberately keep ONE value in every shipped theme. A
+#: new theme may still override any of them (set_theme resets every key any
+#: palette names); a colour token that is neither listed here nor set by every
+#: theme fails tests/test_theme_engine.py, so a forgotten token cannot ship.
+THEME_INVARIANT = ("SCRIM",)
 INK = "#191512"            # dark text ON gold/teal filled buttons
 
 # ---- warframe.market-inspired palette (My Listings cards) ------------------
 # Deepened ~8% onto the lacquer, semantics preserved; the site pink stays
 # EXACT so cards echo the embedded warframe.market web view.
 WFM_CARD = "#16140f"
-WFM_EDGE = "#37301f"       # (legacy) card border - now folded into BORDER
+INK_FAINT = "#37301f"      # the faintest ink: disabled and placeholder
+                           # text, separator dots. (Was WFM_EDGE - once
+                           # a card border, long since folded into
+                           # BORDER; nothing draws an edge with it.)
 # ONE border colour for every frame in the app - cards, containers, inputs,
 # separators. All of them reference this; changing it moves every border at once.
 BORDER = "#37301f"
 # The Vosfor progress-bar TRACK (the unfilled groove the gold/jade bar sits in) -
-# a true SURFACE, split out of WFM_EDGE, which is a border/ink token that was
-# doing fill duty here. == the old WFM_EDGE value so the bar looks unchanged.
+# a true SURFACE, split out of the old card-edge token (now INK_FAINT), which
+# was an ink doing fill duty here. Same value, so the bar looks unchanged.
 BAR_TRACK = "#37301f"
 WFM_TEAL = "#63c7c9"       # void-energy teal - bridge to the site palette
-WFM_TEAL_DIM = "#2e5150"
 WFM_PINK = "#dd58a5"       # site-exact pink (5.6:1 on WFM_CARD)
 WFM_MUTED = "#a39a88"
 WFM_BADGE_BG = "#43293a"   # wts tag (plum, like the site)
@@ -184,8 +213,6 @@ RARITY_COLOR = {"Common": RARITY_BRONZE, "Uncommon": RARITY_SILVER,
 # ---- disclosure arrows -----------------------------------------------------
 # Sized to the TITLE they belong to (the h2 role), not to body text - the same
 # pairing the Settings tree uses.
-ARROW_OPEN = "▾"       # down
-ARROW_CLOSED = "▸"     # right
 
 # ---- icons -----------------------------------------------------------------
 # Every mark in the app, named by what it MEANS rather than by a codepoint.
@@ -204,14 +231,14 @@ ARROW_CLOSED = "▸"     # right
 # shop icon. A typo therefore renders as the word "storefornt" rather than as
 # a blank box, which is a louder failure and a much easier fix.
 #
-# Both codes live in one row so the two front ends cannot drift while the Tk
-# app is still shipping. Qt reads `.material`; Tk reads `.fluent` and keeps the
-# Windows glyphs it can actually render.
+# The front end reads `.material`. `.fluent` (a Segoe Fluent codepoint) is
+# what the retired Tk front end drew; it remains the fallback glyph() returns
+# when asked for it.
 
 
 class Icon(NamedTuple):
     material: str      # Material Symbols ligature name - the Qt front end
-    fluent: str        # Segoe Fluent Icons codepoint - the Tk front end
+    fluent: str        # Segoe Fluent Icons codepoint - legacy fallback
 
 
 ICONS: dict[str, Icon] = {
@@ -262,6 +289,16 @@ ICONS: dict[str, Icon] = {
     "unarchive": Icon("unarchive", "\uE898"),
     # the watchlist star: one glyph, filled when watched
     "watch":     Icon("star", "\u2606"),
+    # marks that used to be typed straight into label text as dingbats. No
+    # themed text face contains those characters, so Windows drew them from
+    # its own symbol font (and a machine without one drew empty boxes). They
+    # are icons, so they come from the icon face like every other icon.
+    "stack":     Icon("inventory_2", "\u2752"),     # "x in stock" after a quantity
+    "beaten":    Icon("warning", "\u26A0"),         # undercut / outbid
+    "up":        Icon("arrow_upward", "\u2191"),    # positive reputation
+    "down":      Icon("arrow_downward", "\u2193"),  # negative reputation
+    "no_image":  Icon("image", "\u25CD"),           # item art not loaded yet
+    "contract":  Icon("diamond", "\u25C8"),         # riven / lich art stand-in
     # Dev data-explorer apps + their group
     "world":     Icon("public", "\ue774"),
     "profile":   Icon("person", "\ue77b"),
@@ -313,8 +350,7 @@ FONTS: dict[str, tuple[tuple[str, ...], int]] = {
     "mono":  (("Cascadia Mono", "Consolas"), 10),
     # nav/action glyphs (NEVER colour emoji). Material Symbols ships WITH the
     # app, so unlike every other role this one does not degrade - the Segoe
-    # fallbacks are there only for the Tk front end, which cannot load a font
-    # from a file without a Windows-only API call.
+    # fallbacks only matter if the bundled font file fails to load.
     "icon":   (("Material Symbols Sharp", "Segoe Fluent Icons",
                 "Segoe MDL2 Assets"), 12),
     # the mail-copy button in the Market order book - the one place a glyph is
@@ -406,6 +442,51 @@ def size_of(role: str) -> int:
     return FONTS[role][1]
 
 
+# ---- live colour lookups -----------------------------------------------------
+# A theme switch rewrites this module's globals in place (set_theme). Anything
+# that COPIED a colour out earlier - a module-level dict, a class attribute, a
+# default argument - keeps the old theme's value until the app restarts. So a
+# table that maps a role or a state to a colour stores token NAMES and resolves
+# them at the moment of use, through these two. (tests/test_theme_engine.py
+# fails the build on an import-time copy.)
+
+def color(name: str) -> str:
+    """The CURRENT value of the colour token called `name`."""
+    return globals()[name]
+
+
+class TokenMap:
+    """key -> colour, where the colour is read LIVE on every lookup.
+
+        ROLE_COLOR = TokenMap(ok="OK", warn="WARN")
+        ROLE_COLOR["ok"]        # today's theme's OK, whenever it is asked
+
+    A value may be a tuple of token names (a background/foreground pair); the
+    lookup then returns the matching tuple of colours."""
+
+    def __init__(self, table: dict | None = None, **names) -> None:
+        self._names = {**(table or {}), **names}
+
+    def __getitem__(self, key):
+        value = self._names[key]
+        if isinstance(value, tuple):
+            return tuple(color(n) for n in value)
+        return color(value)
+
+    def get(self, key, default=None):
+        return self[key] if key in self._names else default
+
+    def __contains__(self, key) -> bool:
+        return key in self._names
+
+    def __iter__(self):
+        return iter(self._names)
+
+    def token(self, key):
+        """The token NAME(s) behind `key` (for a style property, a test)."""
+        return self._names[key]
+
+
 # ---- theme selection --------------------------------------------------------
 # Orokin Light is a SECOND palette: the colour values below are overlaid over the
 # Orokin Dark defaults defined above. Metrics, spacing, fonts and icons are
@@ -440,7 +521,7 @@ _LIGHT = dict(
     # border the SAME louder bronze so the frame reads as one continuous inlay.
     # -- background layers (deeper, aged, shadowed) --
     BG="#d7c9a8", TAB_BG="#cabb98", ICON_BG="#b3a57f", ROW_ALT="#d1c3a2",
-    SIDEBAR_BG="#cfc09d", HEADER_BG="#cdbf9c", TITLEBAR_BG="#ccbe9a",
+    SIDEBAR_BG="#cfc09d", HEADER_BG="#cdbf9c",
     TITLEBAR_HOVER="#c0b28d", TITLEBAR_CLOSE="#a63d2b", SIDEBAR_ACTIVE="#dccfad",
     CONSOLE_BG="#cdc1a1",
     # -- foreground surfaces (lighter, lit cream) --
@@ -453,10 +534,10 @@ _LIGHT = dict(
     # -- bronze: fills/marks, and ONE louder border for every gold edge --
     ACCENT="#9a7638", ACCENT_SURFACE="#9a7638", GOLD_HI="#b08a45",
     GOLD_FAINT="#e2d3a4", INK="#231c10",
-    BORDER="#9e7724", BAR_TRACK="#9e7724", GOLD_DIM="#9e7724", WFM_EDGE="#9e7724",
-    FIELD_EDGE="#9e7724", HAIRLINE="#9e7724", PLAT="#4d5a61",
+    BORDER="#9e7724", BAR_TRACK="#9e7724", GOLD_DIM="#9e7724", INK_FAINT="#9e7724",
+    FIELD_EDGE="#9e7724", PLAT="#4d5a61",
     # -- warframe.market accents (kept muted so they sit under the bronze) --
-    WFM_TEAL="#2d8284", WFM_TEAL_DIM="#77a9a7", WFM_PINK="#b6447d",
+    WFM_TEAL="#2d8284", WFM_PINK="#b6447d",
     WFM_MUTED="#716544",
     WFM_BADGE_BG="#dabfce", WFM_BADGE_FG="#7c3a5f", WFM_BUY_BG="#c0d4da",
     WFM_BUY_FG="#2b5462", WFM_RED="#b4443a", WFM_RED_DIM="#cb9e91",
@@ -479,7 +560,7 @@ _LIGHT = dict(
 _CHRISTMAS_DARK = dict(
     # -- background layers: deep evergreen lacquer, warm --
     BG="#0f2417", TAB_BG="#0b1b11", ICON_BG="#060f09", ROW_ALT="#13291b",
-    SIDEBAR_BG="#0b1a11", HEADER_BG="#0d1e13", TITLEBAR_BG="#081409",
+    SIDEBAR_BG="#0b1a11", HEADER_BG="#0d1e13",
     TITLEBAR_HOVER="#3a1c1a", TITLEBAR_CLOSE="#a5342a", SIDEBAR_ACTIVE="#4a1a17",
     CONSOLE_BG="#07130b",
     # -- foreground surfaces (lit evergreen) --
@@ -493,9 +574,9 @@ _CHRISTMAS_DARK = dict(
     ACCENT="#d9b45c", ACCENT_SURFACE="#c99a3f", GOLD_HI="#f0cd76",
     GOLD_DIM="#8a6f38", GOLD_FAINT="#243016", INK="#1b2410",
     BORDER="#8a6d33", BAR_TRACK="#0b1b11", FIELD_EDGE="#8a6d33",
-    HAIRLINE="#233420", PLAT="#cdd9e2",
+    PLAT="#cdd9e2",
     # -- warframe.market accents, re-tinted festive (holly + frost + pine) --
-    WFM_EDGE="#8a6d33", WFM_TEAL="#7fcbbb", WFM_TEAL_DIM="#2f5249",
+    INK_FAINT="#8a6d33", WFM_TEAL="#7fcbbb",
     WFM_PINK="#e58aa8", WFM_MUTED="#9aa693",
     WFM_BADGE_BG="#a8352b", WFM_BADGE_FG="#f6e2d4",
     WFM_BUY_BG="#1d3a2a", WFM_BUY_FG="#9ed7b2",
@@ -510,9 +591,9 @@ _CHRISTMAS_DARK = dict(
 # Christmas Light: candy cane. NOT a light-mode parity of the dark theme - it
 # stands on its own and leans HARD into red + green. The whiteness is gone: the
 # whole ground is holly-mint, table rows stripe green<->rose, and the STRUCTURE
-# carries the colour - BORDER is a real green (every panel + the rail's app
-# containers are framed green) and WFM_EDGE is candy red (every market/listing
-# card is framed red), so red and green literally stripe the layout. Cards stay
+# carries the colour - BORDER is candy red (every panel, card and rail
+# container is framed red) and FIELD_EDGE is green (every input, dropdown and
+# checkbox is trimmed green), so red and green literally stripe the layout. Cards stay
 # peppermint-WHITE as the stripe between them, and all ink stays dark evergreen
 # so it reads on the tinted ground. Green is the accent metal (money buttons,
 # marks, finial, item names, WTB, positives); red owns attention (WTS tags, the
@@ -523,7 +604,7 @@ _CHRISTMAS_DARK = dict(
 _CHRISTMAS_LIGHT = dict(
     # -- surfaces: holly-mint ground, no more snow (dark ink still reads) --
     BG="#dcecd8", TAB_BG="#cee4c9", ICON_BG="#c6dfc1", ROW_ALT="#f6e1de",
-    SIDEBAR_BG="#cfe4ca", HEADER_BG="#cbe1c6", TITLEBAR_BG="#c4ddbe",
+    SIDEBAR_BG="#cfe4ca", HEADER_BG="#cbe1c6",
     TITLEBAR_HOVER="#f3c7c0", TITLEBAR_CLOSE="#c0392b", SIDEBAR_ACTIVE="#ee9f95",
     CONSOLE_BG="#cfe4ca",
     WFM_CARD="#ffffff", PANEL="#d6e9d1", PANEL_HI="#c4ddbe",
@@ -540,10 +621,10 @@ _CHRISTMAS_LIGHT = dict(
     # the green content it wraps - the candy cane. FIELD_EDGE stays green so
     # inputs/dropdowns keep green trim inside the red-framed panels.
     BORDER="#cf3a2f", BAR_TRACK="#d4e6cf", FIELD_EDGE="#4aa869",
-    HAIRLINE="#c2d8bd", PLAT="#6b7883",
-    # -- warframe.market accents: LOUD candy red/green (WFM_EDGE = muted sage,
+    PLAT="#6b7883",
+    # -- warframe.market accents: LOUD candy red/green (INK_FAINT = muted sage,
     #    it's disabled/placeholder ink, NOT a frame - must not shout) --
-    WFM_EDGE="#93ac90", WFM_TEAL="#1c8a52", WFM_TEAL_DIM="#a7d3ba",
+    INK_FAINT="#93ac90", WFM_TEAL="#1c8a52",
     WFM_PINK="#cc3f7a", WFM_MUTED="#63745f",
     WFM_BADGE_BG="#d02b22", WFM_BADGE_FG="#fff2ef",
     WFM_BUY_BG="#2fb35f", WFM_BUY_FG="#08340f",
@@ -589,19 +670,19 @@ _FACEABLE_ROLES = ("app_title", "nav_title", "h1", "h2", "card_title", "body",
 _BE_VIETNAM = {r: "Be Vietnam Pro" for r in _FACEABLE_ROLES}
 _DEV_BOXES = dict(
     BG="#de7c7c", TAB_BG="#95ace4", ICON_BG="#b6de7c", ROW_ALT="#e495db",
-    SIDEBAR_BG="#7cdece", HEADER_BG="#e4c095", TITLEBAR_BG="#957cde",
+    SIDEBAR_BG="#7cdece", HEADER_BG="#e4c095",
     TITLEBAR_HOVER="#98e495", TITLEBAR_CLOSE="#de7c9d",
     SIDEBAR_ACTIVE="#95c7e4", CONSOLE_BG="#d6de7c", WFM_CARD="#d495e4",
     PANEL="#7cdead", PANEL_HI="#e4a595", FIELD_BG_IN="#7c85de",
     FIELD_BG_OUT="#b3e495", MUTED_SURFACE="#de7cbe", ACCENT_SURFACE="#95e1e4",
     OK_SURFACE="#c79ee4", BAR_TRACK="#e4d27c",
-    GOLD_HI="#dec67c", GOLD_FAINT="#b995e4", WFM_TEAL_DIM="#7cde8d",
+    GOLD_HI="#dec67c", GOLD_FAINT="#b995e4",
     WFM_BADGE_BG="#e4959f", WFM_BUY_BG="#7ca6de", WFM_RED_DIM="#cee495",
     TEXT="#000000", MUTED="#000000", CONSOLE_FG="#000000", OK="#000000",
     ACCENT="#000000",
     WARN="#000000", ERR="#000000", INK="#000000", GOLD_DIM="#000000",
-    BORDER="#000000", WFM_EDGE="#000000", FIELD_EDGE="#000000",
-    HAIRLINE="#000000", PLAT="#000000", WFM_TEAL="#000000",
+    BORDER="#000000", INK_FAINT="#000000", FIELD_EDGE="#000000",
+    PLAT="#000000", WFM_TEAL="#000000",
     WFM_PINK="#000000", WFM_MUTED="#000000", WFM_BADGE_FG="#000000",
     WFM_BUY_FG="#000000", WFM_RED="#000000", RARITY_BRONZE="#000000",
     RARITY_SILVER="#000000", WEB_ACCENT="#000000", REP_UP="#000000",
@@ -610,19 +691,19 @@ _DEV_BOXES = dict(
 )
 _DEV_BOUNDARIES = dict(
     BG="#333333", TAB_BG="#333333", ICON_BG="#333333", ROW_ALT="#333333",
-    SIDEBAR_BG="#333333", HEADER_BG="#333333", TITLEBAR_BG="#333333",
+    SIDEBAR_BG="#333333", HEADER_BG="#333333",
     TITLEBAR_HOVER="#333333", TITLEBAR_CLOSE="#333333",
     SIDEBAR_ACTIVE="#333333", CONSOLE_BG="#333333", WFM_CARD="#333333",
     PANEL="#333333", PANEL_HI="#333333", FIELD_BG_IN="#333333",
     FIELD_BG_OUT="#333333", MUTED_SURFACE="#333333", ACCENT_SURFACE="#333333",
     OK_SURFACE="#333333", BAR_TRACK="#333333",
-    GOLD_HI="#333333", GOLD_FAINT="#333333", WFM_TEAL_DIM="#333333",
+    GOLD_HI="#333333", GOLD_FAINT="#333333",
     WFM_BADGE_BG="#333333", WFM_BUY_BG="#333333", WFM_RED_DIM="#333333",
     TEXT="#f65a5a", MUTED="#3d73f5", CONSOLE_FG="#b5f65a", OK="#f53dde",
     ACCENT="#f5d23d",
     WARN="#5af6dc", ERR="#f5a13d", INK="#815af6", GOLD_DIM="#45f53d",
-    BORDER="#f65a8e", WFM_EDGE="#3db0f5", FIELD_EDGE="#eaf65a",
-    HAIRLINE="#ce3df5", PLAT="#5af6a8", WFM_TEAL="#f5633d",
+    BORDER="#f65a8e", INK_FAINT="#3db0f5", FIELD_EDGE="#eaf65a",
+    PLAT="#5af6a8", WFM_TEAL="#f5633d",
     WFM_PINK="#5a68f6", WFM_MUTED="#82f53d", WFM_BADGE_FG="#f65ac3",
     WFM_BUY_FG="#3deef5", WFM_RED="#f6cf5a", RARITY_BRONZE="#913df5",
     RARITY_SILVER="#5af674", WEB_ACCENT="#f53d55", REP_UP="#5a9cf6",
@@ -650,14 +731,14 @@ _DEV_FONTS_FACES = {
 # The canonical FILL vs INK token split (the same one Dev-Boxes encodes by
 # colour). Dev-Fonts paints every fill one light grey and every ink black.
 _FILL_TOKENS = ("BG", "TAB_BG", "ICON_BG", "ROW_ALT", "SIDEBAR_BG", "HEADER_BG",
-                "TITLEBAR_BG", "TITLEBAR_HOVER", "TITLEBAR_CLOSE",
+                "TITLEBAR_HOVER", "TITLEBAR_CLOSE",
                 "SIDEBAR_ACTIVE", "CONSOLE_BG", "WFM_CARD", "PANEL", "PANEL_HI",
                 "FIELD_BG_IN", "FIELD_BG_OUT", "MUTED_SURFACE", "ACCENT_SURFACE",
                 "OK_SURFACE", "BAR_TRACK", "GOLD_HI", "GOLD_FAINT",
-                "WFM_TEAL_DIM", "WFM_BADGE_BG", "WFM_BUY_BG", "WFM_RED_DIM")
+                "WFM_BADGE_BG", "WFM_BUY_BG", "WFM_RED_DIM")
 _INK_TOKENS = ("TEXT", "MUTED", "CONSOLE_FG", "OK", "ACCENT", "WARN", "ERR",
-               "INK", "GOLD_DIM", "BORDER", "WFM_EDGE", "FIELD_EDGE",
-               "HAIRLINE", "PLAT", "WFM_TEAL", "WFM_PINK", "WFM_MUTED",
+               "INK", "GOLD_DIM", "BORDER", "INK_FAINT", "FIELD_EDGE",
+               "PLAT", "WFM_TEAL", "WFM_PINK", "WFM_MUTED",
                "WFM_BADGE_FG", "WFM_BUY_FG", "WFM_RED", "RARITY_BRONZE",
                "RARITY_SILVER", "WEB_ACCENT", "REP_UP", "REP_DOWN",
                "WFM_GREEN")

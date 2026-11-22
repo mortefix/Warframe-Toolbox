@@ -3,9 +3,8 @@ warframe.market item names, and the arcane names the Vosfor planner reads
 out of AlecaFrame.
 
 The wiki is one of the Toolbox's own tabs, so these URLs are handed to the
-embedded browser (App.open_wiki -> WebAppView -> webhost.open_site), never
-to webbrowser.open(). The only place a wiki URL reaches an external browser
-is the "can't be embedded" fallback, and only when the user clicks it.
+embedded browser (MainWindow.open_wiki -> WebAppView), never to
+webbrowser.open().
 
 Market names are not wiki titles. "Rhino Prime Set" and "Braton Prime
 Barrel" are listings; the articles are "Rhino Prime" (which the wiki itself

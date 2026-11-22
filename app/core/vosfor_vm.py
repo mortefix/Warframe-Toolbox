@@ -252,10 +252,11 @@ def next_override(override: dict, arc: dict) -> bool:
     return True
 
 
-#: One leading marker for every recommendation line - the inverted rightwards
-#: arrow the app is asked to use. Kept as a named constant so the block reads
-#: uniformly and a future change touches one place, not five f-strings.
-RECO_MARK = "➢"
+#: One leading marker for every recommendation line. A plain bullet: it was
+#: the arrowhead "➢", which no themed text face contains, so it was drawn from
+#: the machine's symbol font (or as an empty box). Kept as a named constant so
+#: the block reads uniformly and a future change touches one place.
+RECO_MARK = "•"
 
 
 def reco_lines(model: dict, methods: dict, balance: int) -> list[str]:
@@ -289,7 +290,7 @@ def reco_lines(model: dict, methods: dict, balance: int) -> list[str]:
         plan = vosfor.plan_budget(model, balance)
         parts = [f"{r['collection']} ×{r['packs']}" for r in plan["plan"]]
         lines.append(
-            f"{m}  {balance:,} Vosfor ({plan['packs']} packs) → "
+            f"{m}  {balance:,} Vosfor ({plan['packs']} packs): "
             + "  ·  ".join(parts) if parts
             else f"{m}  {balance:,} Vosfor buys {plan['packs']} packs.")
         lines.append(
