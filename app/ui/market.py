@@ -17,7 +17,8 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (QCheckBox, QDialog, QFrame, QHBoxLayout,
                                QLineEdit, QPushButton, QScrollArea,
-                               QStackedWidget, QVBoxLayout, QWidget)
+                               QSizePolicy, QStackedWidget, QVBoxLayout,
+                               QWidget)
 
 from core import wf_inventory
 from core import market as core_market
@@ -41,6 +42,8 @@ COL_QTY, COL_RANK, COL_PLAT = 46, 40, 46
 ANY_RANK = "any"
 RANK_WIDTH = 90     # fixed, so showing it costs the search box a known
                     # amount rather than a text-dependent one
+TARGET_FIELD_W = 52  # a watched item's target price: the width My Listings
+                     # gives its limit field (ui/listings.py LIMIT_FIELD_W)
 TAB_ACCENTS = t.TokenMap(market="WFM_TEAL", contracts="WFM_PINK",
                          watchlist="ACCENT")
 
@@ -816,6 +819,12 @@ class WatchlistTab(QWidget):
         self.rows: dict[str, object] = {}
         self.contract_rows: dict[tuple, object] = {}
         self._jobs = set()
+        # target prices: slug -> (row panel, hit words, target field, field
+        # caption), the stored targets, and each item's last fetched
+        # (sell, buy) so a hit survives the rows being rebuilt by reload()
+        self.item_rows: dict[str, tuple] = {}
+        self.targets: dict[str, int] = {}
+        self._prices: dict[str, tuple] = {}
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(*t.TOP_GAP_MARGINS)
@@ -886,8 +895,16 @@ class WatchlistTab(QWidget):
     def reload(self) -> None:
         self.rows.clear()
         self.contract_rows.clear()
-        self._fill_items(core_market.load_watchlist())
+        self.item_rows.clear()
+        watchlist = core_market.load_watchlist()
+        self.targets = core_market.load_watch_targets()
+        self._prices = {s: p for s, p in self._prices.items()
+                        if s in watchlist}
+        self._fill_items(watchlist)
         self._fill_contracts(core_market.load_contract_watchlist())
+        for slug in watchlist:
+            self._paint_hit(slug)
+        self._paint_hit_count()
 
     def _column(self, side: str):
         body = panel()
@@ -911,16 +928,94 @@ class WatchlistTab(QWidget):
                 name, t.WFM_TEAL, f"open {name} in the Market tab",
                 lambda _c=False, s=slug, n=name:
                     self.view.open_in_market(s, n)))
-            price = label("  —", role="small")
+            # the last fetched price, if there is one: a reload() between
+            # fetches must not leave a row marked as a hit beside no price
+            price = label(vm.price_line(*self._prices[slug])
+                          if slug in self._prices else "  —", role="small")
             self.rows[slug] = price
             h.addWidget(price)
-            h.addStretch(1)
+            # Takes the row's spare width and is never allowed to ask for
+            # more: a caption that widened the row would push the target
+            # field and the remove button out of the column. The tooltip
+            # carries the whole text if a narrow window clips it.
+            hit = label("", role="small", level="ok")
+            hit.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+            hit.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            h.addWidget(hit, 1)
+            # the field's caption; on a hit the words above stand in for it
+            # ("at or below target [30]"), so it steps aside
+            caption = label("Target", role="small")
+            h.addWidget(caption)
+            target = self.targets.get(slug)
+            field = QLineEdit("" if target is None else str(target))
+            field.setFixedWidth(TARGET_FIELD_W)
+            field.setAlignment(Qt.AlignCenter)
+            field.setMaxLength(6)
+            field.setToolTip("the price you are waiting for, in platinum: "
+                             "the row lights up when the cheapest live "
+                             "seller is at or below it - blank means no "
+                             "target")
+            field.editingFinished.connect(
+                lambda s=slug, f=field: self._target_edited(s, f))
+            h.addWidget(field)
+            self.item_rows[slug] = (line, hit, field, caption)
             h.addWidget(self._remove_btn(
                 f"stop watching {name}",
                 lambda _c=False, s=slug: self._remove(s)))
             col.addWidget(line)
         col.addStretch(1)
         self.areas["items"].setWidget(body)
+
+    # -- target prices -------------------------------------------------------
+
+    def _target_edited(self, slug: str, field) -> None:
+        """Enter or leaving the field commits. A field that is not this
+        slug's CURRENT one is a row reload() has since replaced, still
+        reporting the focus it lost on the way out - ignore it."""
+        if not alive(self):
+            return
+        row = self.item_rows.get(slug)
+        if row is None or row[2] is not field or not alive(field):
+            return
+        stored = self.targets.get(slug)
+        parsed = vm.parse_watch_target(field.text())
+        if parsed == "invalid":
+            parsed = stored             # nonsense repaints to the stored value
+        elif parsed != stored:
+            self.targets = vm.set_watch_target(
+                core_market.load_watch_targets(), slug, parsed)
+            core_market.save_watch_targets(self.targets)
+        field.setText("" if parsed is None else str(parsed))
+        self._paint_hit(slug)
+        self._paint_hit_count()
+
+    def _paint_hit(self, slug: str) -> None:
+        """Mark (or unmark) one row from its last fetched price and its
+        target. The gold edge is the style sheet's own "listing hit" rule;
+        the caption says the same thing in words."""
+        row = self.item_rows.get(slug)
+        if row is None or not alive(row[0]):
+            return
+        line, words, _field, caption = row
+        min_sell = self._prices.get(slug, (None, None))[0]
+        target = self.targets.get(slug)
+        hit = vm.watch_target_hit(min_sell, target)
+        line.setProperty("surface", "listing" if hit else "")
+        line.setProperty("hit", "true" if hit else "false")
+        restyle(line)
+        words.setText(vm.watch_hit_text(min_sell, target))
+        words.setToolTip(vm.watch_hit_tip(min_sell, target))
+        caption.setVisible(not hit)
+        price = self.rows.get(slug)
+        if price is not None:
+            price.setProperty("level", "ok" if hit else "")
+            restyle(price)
+
+    def _paint_hit_count(self) -> None:
+        show = getattr(self.view, "set_watch_hits", None)
+        if show is not None:
+            show(vm.count_watch_hits(
+                {s: p[0] for s, p in self._prices.items()}, self.targets))
 
     def _fill_contracts(self, contracts: list[dict]) -> None:
         body, col = self._column("contracts")
@@ -984,14 +1079,21 @@ class WatchlistTab(QWidget):
                     return
                 w = self.rows.get(slug)
                 if w is not None:
-                    w.setText(vm.price_line(*vm.best_live_prices(book)))
+                    self._prices[slug] = vm.best_live_prices(book)
+                    w.setText(vm.price_line(*self._prices[slug]))
+                    self._paint_hit(slug)
+                    self._paint_hit_count()
 
             def bad(_msg):
                 if not alive(self):
                     return
                 w = self.rows.get(slug)
                 if w is not None:
+                    # an unknown price is not a hit, whatever it was before
+                    self._prices.pop(slug, None)
                     w.setText("  fetch failed")
+                    self._paint_hit(slug)
+                    self._paint_hit_count()
             return ok, bad
 
         for slug in slugs:
@@ -1142,6 +1244,12 @@ class MarketView(QWidget):
         tab.kind.setCurrentText(entry["kind"])
         tab.weapon.setText(entry.get("name", ""))
         tab._picked(entry.get("name", ""), entry["slug"])
+
+    def set_watch_hits(self, hits: int) -> None:
+        """The Watchlist tab's caption counts the items at their target."""
+        btn = getattr(self, "tab_btns", {}).get("watchlist")
+        if btn is not None:
+            btn.setText(vm.watch_tab_title(hits))
 
     def watchlist_changed(self, from_watchlist: bool = False) -> None:
         if not from_watchlist:

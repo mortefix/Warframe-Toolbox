@@ -289,7 +289,7 @@ class ListingCard(QFrame):
         info.addWidget(plat_label(), 0, mid)
         info.addWidget(label("Each", role="small"), 0, mid)
         info.addWidget(self._dot(), 0, mid)
-        self.market = label(f"{spec.best_word.capitalize()} …", role="small")
+        self.market = label(f"{spec.best_word.capitalize()}: checking…", role="small")
         self.market.setToolTip("best live price from another trader")
         info.addWidget(self.market, 0, mid)
         # the online count is a SEPARATE plain label (never rich text, which
@@ -591,14 +591,18 @@ class ListingCard(QFrame):
             self.online.setText("")
             return
         if l.market_low is None:
-            # "…" is still loading; "only listing" is a finished sweep that
-            # found no competition - a good outcome, not a stalled one
-            self.market.setText("Only Listing" if self.market_known
-                                else f"{self.spec.best_word.capitalize()} …")
+            # "checking…" is still loading; "only listing" is a finished sweep
+            # that found no competition - a good outcome, not a stalled one.
+            # (It said just "Low …", which read as a label cut short.)
+            self.market.setText(
+                "Only Listing" if self.market_known
+                else f"{self.spec.best_word.capitalize()}: checking…")
             self.market.setStyleSheet(f"color: {t.WFM_MUTED};")
             # restore the healthy tooltip - a recovered card must not keep
             # a stale error from a previous failed sweep
-            self.market.setToolTip("best live price from another trader")
+            self.market.setToolTip(
+                "best live price from another trader" if self.market_known
+                else "looking up the best live price from another trader")
             self.online.setText("")
             return
         beaten = core_repricer.better_than(self.spec.side, l.market_low,

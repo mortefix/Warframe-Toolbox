@@ -117,6 +117,7 @@ USER_FILES: list[tuple[str, str]] = [
     ("wfm_session.json", "warframe.market session token (the account link)"),
     ("wfm_listings.json", "My Listings prefs: floor/cap offsets + overrides"),
     ("wfm_watchlist.json", "Market watchlist (bookmarked items)"),
+    ("wfm_watch_targets.json", "Market watchlist: target prices"),
     ("wfm_archive.json", "My Listings: Saved For Later (parked orders + "
                          "target prices)"),
     ("wf_local.json", "Warframe install path override"),

@@ -29,8 +29,10 @@ from PySide6.QtCore import QTimer, QUrl, Signal
 from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QPushButton,
                                QVBoxLayout, QWidget)
 
+from core import onboarding
 from core import theme as t
 from core import wf_profile
+from ui.widgets import LoadingVeil, alive
 
 LOGIN_URL = "https://www.warframe.com/login"
 
@@ -61,6 +63,17 @@ _PROBE_JS = """
 #: lands two polls after sign-in at best. 1500 ms made that a 3-second wait.
 _POLL_MS = 700
 
+#: How long the first page load may take before it is called a failure and
+#: the veil offers Try again. Generous: a cold Chromium start on a busy
+#: connection has been seen to take half a minute.
+_LOAD_TIMEOUT_MS = 60_000
+#: How long after a failed load to wait for a replacement load to start
+#: before believing the failure (see _load_finished).
+_FAIL_GRACE_MS = 1500
+#: How long past the login page, with no account ID, before saying so. The
+#: ID normally lands within about three seconds of signing in.
+_STUCK_MS = 20_000
+
 
 class WarframeCaptureWidget(QWidget):
     """The embedded warframe.com login + account-id capture, shared by
@@ -69,40 +82,141 @@ class WarframeCaptureWidget(QWidget):
     needs no QtWebEngine."""
 
     captured = Signal(str)
+    #: The page's state changed: 'loading' (veiled, spinner), 'ready' (the
+    #: site is on screen, waiting for a sign-in), 'failed' (veiled, with a
+    #: Try again button), 'stuck' (signed in by the look of it, yet no ID -
+    #: the page stays usable and the capture keeps trying) or 'done'.
+    status = Signal(str)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._done = False
+        self.state = ""
         self.view = None
+        self._veil = None
+        self._loads = 0                 # loadStarted count (see _load_finished)
         self._lay = QVBoxLayout(self)
         self._lay.setContentsMargins(0, 0, 0, 0)
         self._lay.setSpacing(t.SP_MD)
         self._timer = QTimer(self)
         self._timer.setInterval(_POLL_MS)
         self._timer.timeout.connect(self._probe)
+        self._load_timer = QTimer(self)
+        self._load_timer.setSingleShot(True)
+        self._load_timer.setInterval(_LOAD_TIMEOUT_MS)
+        self._load_timer.timeout.connect(self._load_timed_out)
+        self._stuck_timer = QTimer(self)
+        self._stuck_timer.setSingleShot(True)
+        self._stuck_timer.setInterval(_STUCK_MS)
+        self._stuck_timer.timeout.connect(self._stuck)
 
     def start(self) -> bool:
         """Bring up the embedded browser. False when QtWebEngine is
         unavailable - the caller shows its fallback copy instead."""
         if self.view is not None:
-            if not self._done:
+            if not self._done and self.state != "failed":
                 self._timer.start()
             return True
         try:
+            from PySide6.QtGui import QColor
             from PySide6.QtWebEngineCore import QWebEnginePage
             from PySide6.QtWebEngineWidgets import QWebEngineView
             from ui import web as ui_web
         except Exception:                                   # noqa: BLE001
             return False
         self.view = QWebEngineView(self)
-        self.view.setPage(QWebEnginePage(ui_web.profile(), self.view))
+        page = QWebEnginePage(ui_web.profile(), self.view)
+        # the app's own background wherever the site has not painted yet,
+        # not Chromium's white (the same choice as the Wiki/Overframe tabs)
+        page.setBackgroundColor(QColor(t.BG))
+        self.view.setPage(page)
         self._lay.addWidget(self.view, 1)
-        self.view.load(QUrl(LOGIN_URL))
-        self._timer.start()
+        # the veil is created AFTER the view so it is the newer sibling and
+        # stacks above it
+        self._veil = LoadingVeil(self)
+        self.view.loadStarted.connect(self._load_started)
+        self.view.loadFinished.connect(self._load_finished)
+        self.view.urlChanged.connect(self._watch_for_stuck)
+        self._load()
         return True
 
     def stop(self) -> None:
         self._timer.stop()
+        self._load_timer.stop()
+        self._stuck_timer.stop()
+
+    # -- page states ----------------------------------------------------------
+
+    def _set_state(self, state: str) -> None:
+        if state != self.state:
+            self.state = state
+            self.status.emit(state)
+
+    def _load(self) -> None:
+        """(Re)load the sign-in page behind the veil. Also the Try again
+        button's action."""
+        self._set_state("loading")
+        self._veil.loading(onboarding.PROFILE_LOADING)
+        self._load_timer.start()
+        self.view.load(QUrl(LOGIN_URL))
+        self._timer.start()
+
+    def _load_started(self) -> None:
+        self._loads += 1
+
+    def _load_finished(self, ok: bool) -> None:
+        if self.state != "loading":
+            return              # a later navigation inside the site
+        if ok:
+            self._load_timer.stop()
+            self._veil.clear()
+            self._set_state("ready")
+            self._watch_for_stuck()
+            return
+        # A load that is REPLACED by another (a redirect done in script)
+        # also reports failure, an instant before the replacement starts.
+        # Only a failure that nothing follows is a real one.
+        seen = self._loads
+        QTimer.singleShot(_FAIL_GRACE_MS, lambda: self._confirm_failed(seen))
+
+    def _confirm_failed(self, loads_then: int) -> None:
+        if not alive(self) or self.state != "loading":
+            return
+        if self._loads == loads_then:
+            self._fail()
+
+    def _load_timed_out(self) -> None:
+        if self.state == "loading":
+            self._fail()
+            self.view.stop()
+
+    def _fail(self) -> None:
+        self._set_state("failed")
+        self._timer.stop()
+        self._load_timer.stop()
+        self._veil.message(onboarding.PROFILE_UNREACHABLE,
+                           onboarding.PROFILE_RETRY, self._load)
+
+    def _watch_for_stuck(self, *_args) -> None:
+        """Arm (or disarm) the "signed in but no ID" timer from where the
+        browser is. Past the site's login page with no ID yet means the
+        sign-in worked and the capture has not - which, before this, was an
+        endless wait with nothing on screen to say so."""
+        if self._done or self.view is None or self.state != "ready":
+            return
+        url = self.view.url()
+        past_login = (url.host().endswith("warframe.com")
+                      and "/login" not in url.path())
+        if past_login:
+            if not self._stuck_timer.isActive():
+                self._stuck_timer.start()
+        else:
+            self._stuck_timer.stop()
+
+    def _stuck(self) -> None:
+        # Report it, and keep polling: if the ID does turn up, it is taken.
+        if not self._done and self.state == "ready":
+            self._set_state("stuck")
 
     def _probe(self) -> None:
         if self._done or self.view is None:
@@ -120,7 +234,10 @@ class WarframeCaptureWidget(QWidget):
                if result not in ("__ERR__", "") else None)
         if aid:
             self._done = True
-            self._timer.stop()
+            self.stop()
+            if self._veil is not None:
+                self._veil.clear()
+            self._set_state("done")
             self.captured.emit(aid)
             return
         # No id this cycle: re-arm the fetch so the next tick tries again,
@@ -158,6 +275,7 @@ class ConnectWarframeDialog(QDialog):
 
         self.capture = WarframeCaptureWidget(self)
         self.capture.captured.connect(self._captured)
+        self.capture.status.connect(self._capture_status)
         lay.addWidget(self.capture, 1)
 
         row = QHBoxLayout()
@@ -169,6 +287,10 @@ class ConnectWarframeDialog(QDialog):
 
         if not self.capture.start():
             raise RuntimeError("QtWebEngine unavailable")
+
+    def _capture_status(self, state: str) -> None:
+        if state == "stuck":
+            self.status.setText(onboarding.PROFILE_STUCK)
 
     def _captured(self, aid: str) -> None:
         self.status.setText("Account ID captured — you're connected.")

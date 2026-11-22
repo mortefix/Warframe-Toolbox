@@ -259,6 +259,15 @@ def next_override(override: dict, arc: dict) -> bool:
 RECO_MARK = "•"
 
 
+def _leftover_note(leftover: int) -> str:
+    """How the plan's closing line accounts for Vosfor it did not spend."""
+    if not leftover:
+        return "."
+    if leftover < vosfor.VOSFOR_PER_PACK:
+        return f" ({leftover:,} left, short of a pack)."
+    return f" ({leftover:,} left over: no further pack is worth buying)."
+
+
 def reco_lines(model: dict, methods: dict, balance: int) -> list[str]:
     """The recommendation block. Returns the lines to join with newlines, or
     a single line when there is nothing left to buy.
@@ -289,14 +298,16 @@ def reco_lines(model: dict, methods: dict, balance: int) -> list[str]:
     if balance >= vosfor.VOSFOR_PER_PACK:
         plan = vosfor.plan_budget(model, balance)
         parts = [f"{r['collection']} ×{r['packs']}" for r in plan["plan"]]
+        # The packs the plan actually buys - not how many the balance could
+        # afford, which is more whenever everything worth buying costs less.
+        planned = plan["spent"] // vosfor.VOSFOR_PER_PACK
         lines.append(
-            f"{m}  {balance:,} Vosfor ({plan['packs']} packs): "
+            f"{m}  {balance:,} Vosfor ({planned} packs): "
             + "  ·  ".join(parts) if parts
             else f"{m}  {balance:,} Vosfor buys {plan['packs']} packs.")
         lines.append(
             f"     ~{plan['expected']:.0f} copies for {plan['spent']:,} Vosfor"
-            + (f" ({plan['leftover']:,} left, short of a pack)."
-               if plan['leftover'] else "."))
+            + _leftover_note(plan["leftover"]))
     else:
         sb = vosfor.suggest_batch(model)
         if sb:

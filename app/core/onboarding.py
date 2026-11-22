@@ -54,6 +54,20 @@ PROFILE_FALLBACK = (
     "Couldn't load warframe.com here - you can connect later from "
     "Settings > Data > Warframe."
 )
+#: The sign-in page's own states (ui/wf_connect.py shows them for the wizard
+#: and for Settings alike). The page used to be a blank white rectangle until
+#: the site answered, and a signed-in page that never produced an ID said
+#: nothing at all, for ever.
+PROFILE_LOADING = "Loading Warframe.com…"
+PROFILE_UNREACHABLE = (
+    "Couldn't reach Warframe.com. Check your connection, then try again."
+)
+PROFILE_RETRY = "Try again"
+PROFILE_STUCK = (
+    "You look signed in, but Warframe.com hasn't given the Toolbox your "
+    "account ID. The site may have changed - skip this step for now and "
+    "check for a Toolbox update."
+)
 PROFILE_DONE = "Account ID captured - you're connected."
 #: The rail's success line (bottom left, beside Back): what worked, and what
 #: to do now. The page's own note sits above a full-height web view and is

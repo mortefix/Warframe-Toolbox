@@ -41,6 +41,7 @@ from core import webapps as core_webapps                      # noqa: E402
 from registry import TOOLS                                    # noqa: E402
 from ui import icons                                          # noqa: E402
 from ui import qss                                            # noqa: E402
+from ui import shortcuts                                      # noqa: E402
 from ui.bridge import PresenceBridge                          # noqa: E402
 from ui.widgets import (Dot, Finial, button_sheet,  # noqa: E402
                         clear_pixmap_cache, hairline, label, logo_pixmap,
@@ -385,6 +386,15 @@ class MainWindow(QWidget):
         self.stack = QStackedWidget()
         body.addWidget(self.stack, 1)
         outer.addLayout(body, 1)
+
+        # Ctrl+1..9 page switching, Ctrl+F search, F5 refresh (ui/shortcuts);
+        # each sidebar row's tooltip names its own key
+        nav_keys = [item.key for item in core_nav.nav_items(TOOLS)]
+        self._shortcuts = shortcuts.install(self, nav_keys)
+        for i, key in enumerate(nav_keys):
+            hint = shortcuts.page_hint(i)
+            if hint:
+                self._rows[key].button.setToolTip(hint)
 
         self.navigate("home")
 

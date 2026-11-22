@@ -12,12 +12,12 @@ import base64
 
 from shiboken6 import isValid as _is_valid
 
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt
+from PySide6.QtCore import QEvent, QPointF, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (QBrush, QColor, QFont, QFontDatabase, QIcon,
                            QLinearGradient, QPainter, QPainterPath, QPen,
                            QPixmap, QPolygonF)
 from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QLabel,
-                               QPushButton, QWidget)
+                               QPushButton, QVBoxLayout, QWidget)
 
 from core import assets
 from core import theme as t
@@ -144,6 +144,135 @@ class Dot(QWidget):
         p.setPen(Qt.NoPen)
         p.setBrush(QColor(self._colour))
         p.drawEllipse(QRectF(1, 1, self._d, self._d))
+
+
+class Spinner(QWidget):
+    """A spinning gold arc: THE "this is loading" mark. Pure paint, no
+    assets; ACCENT ink, read at paint time so a live theme switch recolours
+    it. Hidden until start()."""
+
+    SIZE = 48
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setFixedSize(self.SIZE, self.SIZE)
+        self._angle = 0
+        self._timer = QTimer(self)
+        self._timer.setInterval(16)
+        self._timer.timeout.connect(self._spin)
+        self.hide()
+
+    def _spin(self) -> None:
+        self._angle = (self._angle + 8) % 360
+        self.update()
+
+    def spinning(self) -> bool:
+        return self._timer.isActive()
+
+    def start(self) -> None:
+        self._timer.start()
+        self.show()
+
+    def stop(self) -> None:
+        self._timer.stop()
+        self.hide()
+
+    def paintEvent(self, _event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing, True)
+        pen = QPen(QColor(t.ACCENT))
+        pen.setWidthF(3.0)
+        pen.setCapStyle(Qt.RoundCap)
+        p.setPen(pen)
+        inset = 4.0
+        arc = QRectF(inset, inset, self.SIZE - 2 * inset,
+                     self.SIZE - 2 * inset)
+        p.drawArc(arc, -self._angle * 16, 100 * 16)
+
+
+class LoadingVeil(QWidget):
+    """The one "not ready yet" state for a region of the window.
+
+    An opaque sheet over `host` that shows either the Spinner with a line of
+    text (loading), or a line of text with one optional button (it failed -
+    here is what to do). clear() lifts it. It tracks the host's size by
+    itself, so the caller only ever says which state it is in.
+
+    Why it exists: content that arrives late used to show whatever was there
+    before - a blank white web page for half a minute, or the previous
+    collection's numbers under the new collection's name. A region that is
+    covered while it loads cannot show a stale or half-built state.
+
+    It is a sibling ABOVE the content, never a replacement for it, so the
+    content underneath (a web view in particular) stays shown and keeps its
+    rendering surface."""
+
+    def __init__(self, host: QWidget) -> None:
+        super().__init__(host)
+        self._host = host
+        self._on_action = None
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setProperty("surface", "app")
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(*t.DIALOG_MARGINS)
+        lay.setSpacing(t.SP_MD)
+        lay.addStretch(1)
+        self.spinner = Spinner(self)
+        lay.addWidget(self.spinner, 0, Qt.AlignHCenter)
+        self.text = label("", role="muted")
+        self.text.setWordWrap(True)
+        self.text.setAlignment(Qt.AlignCenter)
+        lay.addWidget(self.text)
+        self.action = QPushButton("")
+        self.action.setCursor(Qt.PointingHandCursor)
+        self.action.clicked.connect(self._act)
+        self.action.hide()
+        lay.addWidget(self.action, 0, Qt.AlignHCenter)
+        lay.addStretch(1)
+        host.installEventFilter(self)
+        self.hide()
+
+    def eventFilter(self, obj, event) -> bool:
+        if obj is self._host and event.type() == QEvent.Resize:
+            self.setGeometry(self._host.rect())
+        return False
+
+    def state(self) -> str:
+        """'loading', 'message', or '' when lifted."""
+        if self.isHidden():
+            return ""
+        return "loading" if self.spinner.spinning() else "message"
+
+    def loading(self, text: str = "Loading…") -> None:
+        self._on_action = None
+        self.action.hide()
+        self.text.setText(text)
+        self.spinner.start()
+        self._cover()
+
+    def message(self, text: str, action: str = "", on_action=None) -> None:
+        """A finished, unsuccessful state. `action` labels the one button
+        (hidden when empty) and `on_action` is what it does."""
+        self.spinner.stop()
+        self.text.setText(text)
+        self._on_action = on_action
+        self.action.setText(action)
+        self.action.setVisible(bool(action))
+        self._cover()
+
+    def clear(self) -> None:
+        self.spinner.stop()
+        self._on_action = None
+        self.hide()
+
+    def _cover(self) -> None:
+        self.setGeometry(self._host.rect())
+        self.show()
+        self.raise_()
+
+    def _act(self) -> None:
+        if self._on_action is not None:
+            self._on_action()
 
 
 def button_sheet(fg: str, *, pad: str, bg: str = "transparent",

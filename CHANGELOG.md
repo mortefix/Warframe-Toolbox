@@ -9,11 +9,29 @@ The current version always lives in `app/core/version.py`.
 ## [Unreleased]
 
 ### Added
+- Market watchlist: give a watched item a target price. When the cheapest
+  online seller is at or below it, the row is outlined in gold and says so,
+  and the Watchlist tab shows how many items are at their target.
+- Keyboard shortcuts: Ctrl+1 to Ctrl+9 switch pages in sidebar order (each
+  sidebar entry's tooltip shows its key), Ctrl+F jumps to the current page's
+  search box, and F5 refreshes the current page.
+- One loading look for content that arrives late: the Warframe.com sign-in
+  page now shows a spinner on the app's own background while the site loads
+  (it was a blank white page, sometimes for half a minute), and the Mods
+  page uses the same spinner.
 - Installer: a "Open the Toolbox automatically when Warframe starts" option,
   ticked by default on a first install, so the feature works straight after
   setup. Re-running Setup shows whatever it is currently set to.
 
 ### Changed
+- Your warframe.market sign-in is now stored encrypted for your Windows
+  account, so a copied, zipped or backed-up data folder no longer carries a
+  usable token. Existing sign-ins are converted the first time the app
+  starts; nobody has to sign in again. (If you go back to an older version
+  of the Toolbox afterwards, you will have to sign in to warframe.market
+  once.) Linux keeps the plain file.
+- My Listings: a card still looking up the market price says "Low:
+  checking…" instead of "Low …", which looked like a label cut short.
 - Mods: the shade slides open and closed more slowly (0.42s, was 0.25s).
 - Setup wizard: when the Warframe.com or warframe.market step succeeds, a
   green line beside the Back button says so and tells you to press Next.
@@ -60,6 +78,16 @@ The current version always lives in `app/core/version.py`.
   from the Public Export it syncs on its own.
 
 ### Fixed
+- Vosfor: with more than 100,000 Vosfor the purchase plan stopped at 500
+  packs, still claimed the full pack count, and called the unspent Vosfor
+  "left, short of a pack". The plan now uses the whole balance, counts the
+  packs it actually recommends, and says so when Vosfor is left over
+  because nothing more is worth buying.
+- Warframe.com sign-in could still wait for ever with nothing on screen. If
+  the site cannot be reached it now says so and offers Try again; and if
+  you are signed in but the site does not hand over your account ID, it
+  tells you instead of waiting silently (and still picks the ID up if it
+  arrives late).
 - Mods: picking a collection no longer shows the previous collection's
   progress bar under the new name while it loads (the bar could rise and
   then fall for a single pick). It stays empty until the count is in.

@@ -211,8 +211,11 @@ class WelcomeWizard(QDialog):
             done = onboarding.MARKET_SUCCESS.format(
                 name=self._get_session().username)
         waiting = ""
-        polling = self._capture is not None and self._capture.view is not None
-        if index == PROFILE and not done and polling:
+        # only while the sign-in page is actually on screen: the capture's
+        # own veil speaks for "loading" and "couldn't reach the site", and
+        # the page note for "signed in, but no ID" (see _profile_status)
+        if index == PROFILE and not done and self._capture is not None \
+                and self._capture.state == "ready":
             waiting = onboarding.PROFILE_WAITING
         self.done_note.setText(done or waiting)
         # green only for a success; the "still waiting" hint is plain
@@ -245,13 +248,28 @@ class WelcomeWizard(QDialog):
                 return
             self._capture = WarframeCaptureWidget(self)
             self._capture.captured.connect(self._profile_captured)
+            self._capture.status.connect(self._profile_status)
             self._profile_holder.addWidget(self._capture, 1)
         if not self._capture.start():
             self.profile_note.setText(onboarding.PROFILE_FALLBACK)
 
+    def _profile_status(self, state: str) -> None:
+        """The sign-in page changed state. Only 'stuck' needs words from the
+        wizard (the page itself shows loading and failure); every change
+        re-evaluates the rail's waiting line."""
+        if state == "stuck":
+            self._set_profile_note(onboarding.PROFILE_STUCK, "warn")
+        self._sync_rail()
+
+    def _set_profile_note(self, text: str, level: str = "") -> None:
+        self.profile_note.setText(text)
+        if (self.profile_note.property("level") or "") != level:
+            self.profile_note.setProperty("level", level)
+            restyle(self.profile_note)
+
     def _profile_captured(self, aid: str) -> None:
         self._set_account_id(aid)
-        self.profile_note.setText(onboarding.PROFILE_DONE)
+        self._set_profile_note(onboarding.PROFILE_DONE)
         self._profile_done = True
         self._sync_rail()
 

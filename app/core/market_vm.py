@@ -260,6 +260,72 @@ def price_line(min_sell: int | None, max_buy: int | None) -> str:
     return text
 
 
+def parse_watch_target(text: str) -> int | None | str:
+    """int >= 1, None for blank (no target), or "invalid" - the same
+    convention as core.archive.parse_target, so a nonsense edit repaints to
+    the stored value instead of storing garbage."""
+    s = text.strip()
+    if not s:
+        return None
+    try:
+        value = int(s)
+    except ValueError:
+        return "invalid"
+    return value if value >= 1 else "invalid"
+
+
+def set_watch_target(targets: dict[str, int], slug: str,
+                     target: int | None) -> dict[str, int]:
+    """A new dict with this item's target set, or cleared by None.
+    Persisting it is the caller's job (core.market owns the file)."""
+    out = dict(targets)
+    if target is None:
+        out.pop(slug, None)
+    else:
+        out[slug] = target
+    return out
+
+
+def watch_target_hit(min_sell: int | None, target: int | None) -> bool:
+    """Is the cheapest live seller at or below the price being waited for?
+    No target, or nobody selling, is never a hit - a row that lights up on
+    missing data is a false alarm."""
+    if min_sell is None or target is None:
+        return False
+    return min_sell <= target
+
+
+def watch_hit_text(min_sell: int | None, target: int | None) -> str:
+    """The words beside a hit row, so the mark is not colour alone. Short,
+    and without the number: they sit against the field that shows it, in a
+    half-width column where a longer caption was clipped (measured at the
+    default 1280px window)."""
+    if not watch_target_hit(min_sell, target):
+        return ""
+    return "at or below target"
+
+
+def watch_hit_tip(min_sell: int | None, target: int | None) -> str:
+    """The same statement in full, for the caption's tooltip."""
+    if not watch_target_hit(min_sell, target):
+        return ""
+    return (f"the cheapest live seller is at {min_sell}p - at or below "
+            f"your {target}p target")
+
+
+def count_watch_hits(prices: dict[str, int | None],
+                     targets: dict[str, int]) -> int:
+    """`prices` is slug -> cheapest live seller, as last fetched."""
+    return sum(1 for slug, target in targets.items()
+               if watch_target_hit(prices.get(slug), target))
+
+
+def watch_tab_title(hits: int) -> str:
+    """The Watchlist tab's caption: it carries the number of items at their
+    target, so a hit shows without opening the tab."""
+    return f"Watchlist · {hits} at target" if hits else "Watchlist"
+
+
 def pretty_slug(slug: str) -> str:
     """A readable name for a watched item before the catalogue has loaded."""
     return slug.replace("_", " ").title()

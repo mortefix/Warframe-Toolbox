@@ -13,8 +13,12 @@ Security posture:
   * The cached session (wfm_session.json) holds the JWT, username, platform,
     and the login EMAIL - the email solely to prefill the sign-in form.
     Delete the file - or use Unlink in the app - to revoke the link locally.
-    chmod 600 is applied best-effort; on Windows it only clears the read-only
-    bit, so the real protection is the user profile's ACLs.
+  * On Windows the file's contents are sealed with DPAPI (core.dpapi): only
+    the same Windows user on the same machine can open them, so a copied,
+    zipped or synced data folder no longer carries a usable token. A plain
+    file from an older version is sealed the first time it is loaded. This
+    does not stop other programs running as the same user. Elsewhere the
+    file is plain JSON with chmod 600.
   * The JWT lives only in the host process; tools get a per-launch gateway
     token instead, valid only against 127.0.0.1 and only while the host runs.
 
@@ -27,6 +31,7 @@ out of git by .gitignore): copying or zipping that folder copies the token.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 from dataclasses import dataclass
@@ -35,7 +40,7 @@ from pathlib import Path
 
 import requests
 
-from core import paths
+from core import dpapi, paths
 # Re-exported so the HTTP modules keep importing it from here; the actual
 # string is derived in core.version (one bump updates every surface).
 from core.version import USER_AGENT  # noqa: F401
@@ -150,12 +155,12 @@ def save(sess: Session) -> None:
     # name two overlapping saves would share. Not atomic.write_json itself,
     # because this file must be locked down before the token is written.
     tmp = SESSION_PATH.with_name(f"{SESSION_PATH.name}.{os.getpid()}.tmp")
-    payload = json.dumps({
+    payload = _seal(json.dumps({
         "jwt": sess.jwt,
         "username": sess.username,
         "platform": sess.platform,
         "email": sess.email,
-    })
+    }))
     try:
         tmp.touch()
         # Best-effort (never fail a good sign-in over file metadata):
@@ -176,6 +181,30 @@ def save(sess: Session) -> None:
         pass
 
 
+def _seal(plain: str) -> str:
+    """The file's contents for a session's JSON. On Windows the JSON is sealed
+    with DPAPI (core.dpapi) and wrapped as {"v": 2, "dpapi": <base64>};
+    anywhere DPAPI is unavailable or refuses, the plain JSON is written as it
+    always was - a working link matters more than the wrapper."""
+    sealed = dpapi.protect(plain.encode("utf-8"))
+    if sealed is None:
+        return plain
+    return json.dumps({"v": 2,
+                       "dpapi": base64.b64encode(sealed).decode("ascii")})
+
+
+def _unseal(data: dict) -> dict | None:
+    """The session fields from a parsed file: sealed (v2) or legacy plain."""
+    if "dpapi" not in data:
+        return data
+    try:
+        plain = dpapi.unprotect(base64.b64decode(data["dpapi"]))
+        inner = json.loads(plain.decode("utf-8")) if plain else None
+    except (ValueError, TypeError, UnicodeDecodeError):
+        return None
+    return inner if isinstance(inner, dict) else None
+
+
 def load() -> Session | None:
     if not SESSION_PATH.exists():
         return None
@@ -185,11 +214,25 @@ def load() -> Session | None:
         return None
     if not isinstance(data, dict):
         return None                 # []/null is valid JSON but .get would crash
-    if not data.get("jwt") or not data.get("username"):
+    legacy = "dpapi" not in data
+    # A sealed file that will not open was sealed by another Windows user or
+    # machine (a copied data folder): it reads as "no account", which is the
+    # point of sealing it.
+    data = _unseal(data)
+    if not data or not data.get("jwt") or not data.get("username"):
         return None
-    return Session(jwt=data["jwt"], username=data["username"],
+    sess = Session(jwt=data["jwt"], username=data["username"],
                    platform=data.get("platform", "pc"),
                    email=data.get("email", ""))
+    if legacy and dpapi.available():
+        # A plain file from before sealing existed: rewrite it sealed now, so
+        # nobody has to sign in again to be protected. Never fail a load over
+        # it - the plain file still works.
+        try:
+            save(sess)
+        except OSError:
+            pass
+    return sess
 
 
 def logout() -> None:

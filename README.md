@@ -40,8 +40,12 @@ Pick an app from the sidebar. Nothing loads until you open it.
 - **Market** — a read-only browser of warframe.market: search any tradeable
   item and see the live order book (sellers cheapest-first, buyers highest,
   with online/in-game status), browse **Contracts** (riven & lich auctions),
-  and keep a **Watchlist** of items to track. Each row has a **✉** button that
-  copies a ready-to-send in-game trade whisper.
+  and keep a **Watchlist** of items to track, each with an optional target
+  price that marks the row when a seller reaches it. Each row has a **✉**
+  button that copies a ready-to-send in-game trade whisper.
+- **Keyboard** — **Ctrl+1** to **Ctrl+9** switch pages in sidebar order (each
+  sidebar entry's tooltip shows its key), **Ctrl+F** jumps to the current
+  page's search box, and **F5** refreshes the current page.
 - **Vosfor** — a planner for **Arcane Dissolution**. It ranks the nine arcane
   collections by how much value your Vosfor buys, tells you how many packs to
   spend where, and can weight the plan by how easily each arcane is farmed or
@@ -62,8 +66,10 @@ where it goes:
   resulting session token, username, platform, and login email (to prefill the
   form) are cached locally in `wfm_session.json`. The token **never leaves your
   computer** — every market request is routed through a small local gateway that
-  adds it, so individual tools never see your credentials. Deleting the file (or
-  **Unlink**) signs you out.
+  adds it, so individual tools never see your credentials. On Windows the file
+  is encrypted for your Windows account, so a copied or backed-up data folder
+  does not carry a usable token (other programs running as you can still read
+  it). Deleting the file (or **Unlink**) signs you out.
 - **Warframe.com profile** *(optional)* — if you connect it, the app reads your
   public profile (mastery, loadout, progression) from Digital Extremes' own
   servers using your public account ID. Read-only.

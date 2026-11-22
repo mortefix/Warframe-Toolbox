@@ -29,7 +29,7 @@ from core import theme as t
 from ui import work
 from ui.mods_common import (Bar, GALLERY_W, ModCard, card_footprint,
                             warm_images)
-from ui.widgets import Dropdown, label, panel
+from ui.widgets import Dropdown, Spinner, label, panel
 
 _TILE_COLS = 5
 _SET_COLS = 8
@@ -211,44 +211,9 @@ class _LedgerRow(QWidget):
         super().mousePressEvent(event)
 
 
-class _Spinner(QWidget):
-    """A spinning gold arc - shown while a freshly picked collection
-    builds its wall. Pure paint, no assets; ACCENT ink per the guide."""
-
-    SIZE = 48
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setFixedSize(self.SIZE, self.SIZE)
-        self._angle = 0
-        self._timer = QTimer(self)
-        self._timer.setInterval(16)
-        self._timer.timeout.connect(self._spin)
-        self.hide()
-
-    def _spin(self) -> None:
-        self._angle = (self._angle + 8) % 360
-        self.update()
-
-    def start(self) -> None:
-        self._timer.start()
-        self.show()
-
-    def stop(self) -> None:
-        self._timer.stop()
-        self.hide()
-
-    def paintEvent(self, _event) -> None:
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing, True)
-        pen = QPen(QColor(t.ACCENT))
-        pen.setWidthF(3.0)
-        pen.setCapStyle(Qt.RoundCap)
-        p.setPen(pen)
-        inset = 4.0
-        arc = QRectF(inset, inset, self.SIZE - 2 * inset,
-                     self.SIZE - 2 * inset)
-        p.drawArc(arc, -self._angle * 16, 100 * 16)
+#: The app's one loading mark (ui.widgets.Spinner) - shown here while a
+#: freshly picked collection builds its wall.
+_Spinner = Spinner
 
 
 class ModsTreasuryView(QWidget):

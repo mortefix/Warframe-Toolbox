@@ -760,6 +760,49 @@ def load_watchlist() -> list[str]:
 
 def save_watchlist(slugs: list[str]) -> None:
     atomic.write_json(WATCHLIST_PATH, slugs)
+    # An item that leaves the watchlist takes its target with it - done here,
+    # at the one place the list is written, so no caller can forget. Without
+    # it, watching the item again months later would resurrect an old target.
+    targets = _read_watch_targets()
+    kept = {s: p for s, p in targets.items() if s in set(slugs)}
+    if kept != targets:
+        atomic.write_json(WATCH_TARGETS_PATH, kept)
+
+
+# Target prices for watched ITEMS: {slug: platinum}, "tell me when the
+# cheapest live seller is at or below this". A file of its own rather than a
+# new shape for wfm_watchlist.json: that file stays the flat list[str] every
+# build so far reads, so an older build opened on the same data folder still
+# loads its watchlist and simply never looks at this one.
+WATCH_TARGETS_PATH = paths.USERDATA / "wfm_watch_targets.json"
+
+
+def _read_watch_targets() -> dict[str, int]:
+    try:
+        data = json.loads(WATCH_TARGETS_PATH.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    out = {}
+    for slug, price in data.items():
+        # bool is an int in Python; a hand-edited `true` is not a price
+        if isinstance(price, int) and not isinstance(price, bool) \
+                and price >= 1:
+            out[slug] = price
+    return out
+
+
+def load_watch_targets() -> dict[str, int]:
+    """Targets for the items watched RIGHT NOW. An entry whose item is no
+    longer on the watchlist (an older build removed it and knew nothing of
+    this file) is not reported."""
+    watched = set(load_watchlist())
+    return {s: p for s, p in _read_watch_targets().items() if s in watched}
+
+
+def save_watch_targets(targets: dict[str, int]) -> None:
+    atomic.write_json(WATCH_TARGETS_PATH, targets)
 
 
 # Watched CONTRACTS live in their own file, deliberately not mixed into the

@@ -268,7 +268,10 @@ def plan_budget(model: dict, vosfor: int) -> dict:
             if not c["completed"] and c["_needed"]}
     bought = {n: 0 for n in live}
     gained = 0.0
-    for _ in range(min(max_packs, 500)):
+    # No pack cap: the loop ends by itself once no collection's next pack is
+    # worth buying. (It used to stop at 500 packs, so any balance over
+    # 100,000 Vosfor got a silently truncated plan.)
+    for _ in range(max_packs):
         best_n, best_m = None, 0.0
         for n, st in live.items():
             m = _marginal(st["needed"], st["bought"])
